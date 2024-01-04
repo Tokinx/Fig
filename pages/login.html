@@ -20,7 +20,7 @@
             setup() {
                 const password = ref('');
                 const login = () => {
-                    fetch(`/?login`, {
+                    fetch(`/api/?action=login`, {
                         method: "POST",
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ password: password.value })

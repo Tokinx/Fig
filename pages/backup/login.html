@@ -1,0 +1,45 @@
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login</title>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <input type="password" id="password" placeholder="Password" v-model="password" />
+        <button @click="login">Login</button>
+    </div>
+
+    <script>
+        const { createApp, ref } = Vue
+
+        createApp({
+            setup() {
+                const password = ref('');
+                const login = () => {
+                    fetch(`/api/?action=login`, {
+                        method: "POST",
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password: password.value })
+                    })
+                        .then((res) => res.json())
+                        .then((res) => {
+                            if (res.code !== 0) {
+                                alert(res.msg);
+                            } else {
+                                location.reload();
+                            }
+                        });
+                }
+
+                return { password, login }
+            },
+
+        }).mount('#app')
+    </script>
+</body>
+
+</html>

@@ -131,18 +131,11 @@ export default class Api {
 		const { request, STORE, Prase } = this.utils;
 		const { rows, page } = await GetReqJson(request);
 		const { success, results } = await STORE.get({ rows, page });
+		const count = await STORE.count({});
 		return Response.json({
 			code: success ? 0 : 1052,
 			msg: 'Success',
-			data: (results || []).map((x) => {
-				let value = {};
-				try {
-					value = JSON.parse(x.value) || {};
-				} catch (e) {
-					console.log(e.message);
-				}
-				return { ...x, ...value };
-			}),
+			data: { results, count, rows, page },
 		});
 	}
 }

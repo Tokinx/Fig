@@ -18,11 +18,17 @@ export default class Utils {
 				const val = await stmt.first('value');
 				return val;
 			};
+			this.count = async ({ where }) => {
+				where = where || '1=1';
+				stmt = SQL.prepare(`SELECT COUNT(*) as count FROM shorten WHERE key <> 'token' AND ${where}`);
+				const val = await stmt.first('count');
+				return val;
+			};
 			this.get = async ({ where, orderby, rows, page }) => {
 				where = where || '1=1';
 				orderby = orderby || 'creation';
 				rows = rows || 10;
-				page = Math.max(page - 1, 0);
+				page = Math.max(page - 1, 0) * rows;
 				stmt = SQL.prepare(`SELECT * FROM shorten WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${rows} OFFSET ${page}`);
 				return await stmt.all();
 			};

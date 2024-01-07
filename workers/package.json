@@ -1,16 +1,13 @@
 {
   "name": "short",
   "version": "0.0.0",
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  },
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev"
-  },
-  "devDependencies": {
-    "wrangler": "^3.0.0"
-  },
-  "dependencies": {
-    "lucide-vue-next": "^0.304.0"
   }
 }

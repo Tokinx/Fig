@@ -66,8 +66,8 @@ export default class Utils {
 
 	async Shorten(len) {
 		len = len || 6;
-		// removed: oOLl 9gq Vv Uu I1
-		const seed = 'ABCDEFGHJKMNPQRSTWXYZabcdefhijkmnprstwxyz2345678';
+		// remind: about 61 million combinations
+		const seed = 'QWERTYUIOPASDFGHJKLZXCVBNM1234567890qwertyuiopasdfghjklzxcvbnm';
 		const seedLen = seed.length;
 		let shorten = '';
 		for (let i = 0; i < len; i++) {

@@ -99,10 +99,10 @@ export default class Api {
 		);
 	}
 
-	async create() {
+	async save() {
 		const { request, STORE, CheckURL } = this.utils;
 		let body = await GetReqJson(request);
-		let { url, shorten } = body;
+		let { url, shorten, creation } = body;
 
 		// check if url is valid
 		if (!(await CheckURL(url))) {
@@ -112,10 +112,12 @@ export default class Api {
 		// if shorten is not provided, generate one
 		shorten = shorten || (await this.utils.Shorten());
 
-		// check if shorten already exists
-		const { url: existed } = await this.utils.ParseFirst(shorten);
-		if (existed) {
-			return Response.json({ code: 1051, msg: 'Shorten already exists.', data: null }, { status: 400 });
+		if (!creation) {
+			// check if shorten already exists
+			const { url: existed } = await this.utils.ParseFirst(shorten);
+			if (existed) {
+				return Response.json({ code: 1051, msg: 'Shorten already exists.', data: null }, { status: 400 });
+			}
 		}
 
 		// save url
@@ -128,7 +130,7 @@ export default class Api {
 	}
 
 	async get() {
-		const { request, STORE, Prase } = this.utils;
+		const { request, STORE } = this.utils;
 		const { rows, page } = await GetReqJson(request);
 		const { success, results } = await STORE.get({ rows, page });
 		const count = await STORE.count({});
@@ -136,6 +138,18 @@ export default class Api {
 			code: success ? 0 : 1052,
 			msg: 'Success',
 			data: { results, count, rows, page },
+		});
+	}
+
+	async delete() {
+		const { request, STORE } = this.utils;
+		let body = await GetReqJson(request);
+		let { shorten } = body;
+		const { success, meta: details } = await STORE.delete(shorten);
+		return Response.json({
+			code: success ? 0 : 1060,
+			msg: success ? 'Success' : JSON.stringify(details),
+			data: null,
 		});
 	}
 }

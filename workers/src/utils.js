@@ -1,12 +1,10 @@
 export default class Utils {
 	request = {};
-	THEME = '';
 	PASSWORD = '';
 	STORE = new (function () {})();
 
 	constructor(request, env) {
 		this.request = request;
-		this.THEME = env.THEME;
 		this.PASSWORD = env.PASSWORD;
 		this.STORE = new (function (SQL) {
 			let stmt = null;
@@ -45,16 +43,6 @@ export default class Utils {
 				return await stmt.run();
 			};
 		})(env.SQLITE);
-	}
-
-	async $static(file, headers) {
-		const result = await fetch(`${this.THEME}/${file}`);
-		return new Response(await result.text(), {
-			headers: {
-				'Content-Type': 'text/html;charset=UTF-8',
-				...headers,
-			},
-		});
 	}
 
 	async SHA256(text) {

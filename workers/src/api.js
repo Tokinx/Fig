@@ -8,30 +8,7 @@ async function GetReqJson(request) {
 	return data;
 }
 
-const BaseConfig = {
-	url: '',
-	switch: {
-		enabled: true, // enable or disable this shorten
-		proxy: false, // proxy the url
-		private: false, // private shorten (iframe show page)
-		expires: false, // expire after a period of time
-		password: false, // password protect
-		android: false, // android app
-		ios: false, // ios app
-		download: false, // download file
-		geo: false, // geo restriction
-	},
-	config: {
-		expires: '',
-		password: '',
-		android: '',
-		ios: '',
-		geo: [],
-		description: '',
-	},
-};
-
-export default class Api {
+export default class ControllerAPI {
 	utils = {};
 
 	constructor(utils) {
@@ -48,6 +25,7 @@ export default class Api {
 		return await this[action]();
 	}
 
+	// login
 	async login() {
 		const { request, PASSWORD, STORE, SHA256 } = this.utils;
 		const { password } = await GetReqJson(request);
@@ -68,6 +46,7 @@ export default class Api {
 		return Response.json({ code: 1001, msg: 'Password error.', data: null }, { status: 401 });
 	}
 
+	// logout
 	async logout() {
 		const { STORE } = this.utils;
 		await STORE.delete('token');
@@ -81,6 +60,7 @@ export default class Api {
 		);
 	}
 
+	// generate a random shorten
 	async randomize() {
 		return Response.json({ code: 0, msg: 'Success', data: await this.utils.Shorten() }, { status: 200 });
 	}
@@ -99,6 +79,7 @@ export default class Api {
 		);
 	}
 
+	// create or update a shorten
 	async save() {
 		const { request, STORE, CheckURL } = this.utils;
 		let body = await GetReqJson(request);
@@ -129,6 +110,7 @@ export default class Api {
 		});
 	}
 
+	// get all shortens
 	async get() {
 		const { request, STORE } = this.utils;
 		const { rows, page } = await GetReqJson(request);
@@ -141,6 +123,7 @@ export default class Api {
 		});
 	}
 
+	// delete a shorten
 	async delete() {
 		const { request, STORE } = this.utils;
 		let body = await GetReqJson(request);

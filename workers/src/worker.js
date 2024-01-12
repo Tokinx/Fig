@@ -1,11 +1,11 @@
 import Utils from './utils.js';
-import Api from './api.js';
+import ControllerAPI from './api.js';
 
 export default {
 	async fetch(request, env, ctx) {
 		const url = new URL(request.url);
 		const utils = new Utils(request, env);
-		const api = new Api(utils);
+		const api = new ControllerAPI(utils);
 		// remove trailing slash and duplicate slashes
 		const path = `/${url.pathname}`.replace(/\/$/, '').replace(/\/{1,}/g, '/');
 
@@ -28,12 +28,28 @@ export default {
 				return await api.Gateway();
 			default:
 				const shorten = path.replace(/\//gi, '');
+				const DynamicCode = '';
 
 				// if shorten is a valid short url, redirect to it
 				if (!unAuth.router(path) && shorten.length >= 6 && shorten.length <= 24) {
 					const short = await utils.ParseFirst(shorten);
 					if (short.url) {
-						return Response.redirect(short.url, 302);
+						switch (short.mode) {
+							case 'redirect':
+								return Response.redirect(short.url, 302);
+							case 'proxy':
+								const proxy = await fetch(short.url);
+								return new Response(await proxy.text(), {
+									headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+								});
+							case 'remind':
+							case 'cloaking':
+								DynamicCode = `window.__PAGE__ = '${short.mode}'; window.__URL__ = '${short.url}';`;
+							default:
+								if (short.safety === 'password') {
+									DynamicCode = `window.__PAGE__ = '${short.safety}';`;
+								}
+						}
 					}
 				}
 
@@ -47,7 +63,12 @@ export default {
 				// if (["/"].includes(path)) {
 				//   return Response.redirect(`${url.origin}/dash`, 302);
 				// }
-				return await utils.$static('index.html');
+
+				const result = await fetch(`${env.THEME}/index.html`);
+				const html = (await result.text()).replace('/* DynamicCode */', DynamicCode);
+				return new Response(html, {
+					headers: { 'Content-Type': 'text/html;charset=UTF-8' },
+				});
 		}
 	},
 };

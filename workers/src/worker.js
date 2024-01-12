@@ -28,7 +28,7 @@ export default {
 				return await api.Gateway();
 			default:
 				const shorten = path.replace(/\//gi, '');
-				const DynamicCode = '';
+				let DynamicCode = '';
 
 				// if shorten is a valid short url, redirect to it
 				if (!unAuth.router(path) && shorten.length >= 6 && shorten.length <= 24) {

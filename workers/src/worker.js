@@ -8,7 +8,10 @@ export default {
 		const api = new ControllerAPI(utils);
 		// remove trailing slash and duplicate slashes
 		const path = `/${url.pathname}`.replace(/\/$/, '').replace(/\/{1,}/g, '/');
+		// write data point
+		utils.DataPoint(path);
 
+		// no auth required
 		const unAuth = {
 			router: (x) => ['/', '/logout'].includes(x),
 			action: (x) => ['login', 'logout'].includes(x),
@@ -31,7 +34,7 @@ export default {
 				let DynamicCode = '';
 
 				// if shorten is a valid short url, redirect to it
-				if (!unAuth.router(path) && shorten.length >= 6 && shorten.length <= 24) {
+				if (!unAuth.router(path) && ['/dash'].includes(path)) {
 					const short = await utils.ParseFirst(shorten);
 					if (short.url) {
 						switch (short.mode) {

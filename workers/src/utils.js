@@ -1,10 +1,12 @@
 export default class Utils {
 	request = {};
+	ANALYTICS = {};
 	PASSWORD = '';
 	STORE = new (function () {})();
 
 	constructor(request, env) {
 		this.request = request;
+		this.ANALYTICS = env.ANALYTICS;
 		this.PASSWORD = env.PASSWORD;
 		this.STORE = new (function (SQL) {
 			let stmt = null;
@@ -63,6 +65,27 @@ export default class Utils {
 		}
 		if (await this.STORE.value(shorten)) return this.Shorten(len);
 		return shorten;
+	}
+
+	async DataPoint(index) {
+		const CF = this.request.cf;
+		const HD = this.request.headers;
+		this.ANALYTICS.writeDataPoint({
+			blobs: [
+				CF.colo,
+				CF.country,
+				CF.city,
+				CF.region,
+				CF.timezone,
+				CF.postalCode,
+				CF.asn,
+				HD.get('cf-connecting-ip'),
+				HD.get('User-Agent'),
+				HD.get('accept-language'),
+			],
+			doubles: [CF.metroCode, CF.longitude, CF.latitude],
+			indexes: [index],
+		});
 	}
 
 	async Cookie() {

@@ -111,6 +111,19 @@ export default class Utils {
 		}
 	}
 
+	async Counter(shorten) {
+		this.ParseFirst(shorten).then((obj) => {
+			obj.clicks++;
+			this.STORE.put(
+				shorten,
+				JSON.stringify({
+					...obj,
+					clicks: obj.clicks,
+				})
+			);
+		});
+	}
+
 	// format json string to object
 	Parse(str, dft) {
 		let value = dft ?? null;

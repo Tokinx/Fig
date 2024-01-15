@@ -135,4 +135,15 @@ export default class ControllerAPI {
 			data: null,
 		});
 	}
+
+	// sesame
+	async sesame() {
+		const { request } = this.utils;
+		const { shorten, password } = await GetReqJson(request);
+		const { url, values } = this.utils.ParseFirst(shorten);
+		if (values.password === password) {
+			return Response.json({ code: 0, msg: 'Success', data: url }, { status: 200 });
+		}
+		return Response.json({ code: 1070, msg: 'Incorrect password', data: null }, { status: 401 });
+	}
 }

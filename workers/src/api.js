@@ -140,9 +140,20 @@ export default class ControllerAPI {
 	async sesame() {
 		const { request } = this.utils;
 		const { shorten, password } = await GetReqJson(request);
-		const { url, values } = this.utils.ParseFirst(shorten);
-		if (values.password === password) {
-			return Response.json({ code: 0, msg: 'Success', data: url }, { status: 200 });
+		const data = this.utils.ParseFirst(shorten);
+		if (data.values.password === password) {
+			return Response.json(
+				{
+					code: 0,
+					msg: 'Success',
+					data: {
+						...data,
+						// hide password
+						values: { ...data.values, password: '******' },
+					},
+				},
+				{ status: 200 }
+			);
 		}
 		return Response.json({ code: 1070, msg: 'Incorrect password', data: null }, { status: 401 });
 	}

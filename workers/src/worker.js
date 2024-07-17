@@ -9,8 +9,7 @@ export default {
 		// remove trailing slash and duplicate slashes
 		const path = `/${url.pathname}`.replace(/\/$/, '').replace(/\/{1,}/g, '/');
 		// write data point
-		utils.DataPoint(path);
-
+		// utils.DataPoint(path);
 		const _check = {
 			// only logged user can access
 			autRouter: (x) => ['/dash'].includes(x),
@@ -34,7 +33,7 @@ export default {
 				}
 				return await api.Gateway();
 			default:
-				const shorten = path.replace(/\//gi, '');
+				const shorten = path.split('/')[1];
 				let DynamicCode = '';
 
 				// if shorten is a valid short url, run it
@@ -53,22 +52,26 @@ export default {
 							DynamicCode = `window.__PAGE__ = 'visit';`;
 						} else if (_excess.expires) {
 							DynamicCode = `window.__PAGE__ = 'expires';`;
-						} else {
-							switch (short.mode) {
-								case 'redirect':
-									return Response.redirect(short.url, 302);
-								case 'proxy':
-									const proxy = await fetch(short.url);
-									return new Response(await proxy.text(), {
-										headers: { 'Content-Type': 'text/html;charset=UTF-8' },
-									});
-								case 'remind':
-								case 'cloaking':
-									DynamicCode = `window.__PAGE__ = '${short.mode}'; window.__URL__ = '${short.url}';`;
-									break;
-								default:
-								// no anythings
-							}
+						}
+
+						// increase click counter
+						utils.Counter(shorten);
+
+						switch (short.mode) {
+							case 'redirect':
+								return Response.redirect(short.url, 302);
+							case 'proxy':
+								const _url = new URL(short.url);
+								_url.pathname = url.pathname.replace(`/${shorten}`, '');
+								_url.search = url.search;
+								_url.hash = url.hash;
+								return await fetch(new Request(_url));
+							case 'remind':
+							case 'cloaking':
+								DynamicCode = `window.__PAGE__ = '${short.mode}'; window.__URL__ = '${short.url}';`;
+								break;
+							default:
+							// no anythings
 						}
 					}
 				}

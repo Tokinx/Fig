@@ -1,0 +1,68 @@
+# 忽略 old 文件夹
+old/
+
+# 依赖
+node_modules/
+*/node_modules/
+
+# 日志
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# 运行时数据
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# 目录
+.npm
+.eslintcache
+.nyc_output
+
+# 覆盖率目录
+coverage/
+*.lcov
+
+# 环境变量
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# 构建输出
+dist/
+dist-ssr/
+*.local
+
+# 编辑器
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# 临时文件
+*.tmp
+*.temp
+
+# Bun
+.bun/
+
+# Workers
+.wrangler/

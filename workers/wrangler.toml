@@ -1,0 +1,23 @@
+name = "fig-workers"
+main = "src/index.js"
+compatibility_date = "2024-01-15"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+ADMIN_PASSWORD = "admin123"
+JWT_SECRET = "your-jwt-secret-key"
+DOMAIN = "localhost:8787"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "fig-db"
+database_id = "your-database-id"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "your-kv-namespace-id"
+preview_id = "your-preview-kv-namespace-id"
+
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "fig-analytics"

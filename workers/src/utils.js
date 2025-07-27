@@ -1,26 +1,27 @@
 export default class Utils {
 	request = {};
-	ANALYTICS = {};
 	PASSWORD = '';
 	STORE = new (function () {})();
 
 	constructor(request, env) {
 		this.request = request;
-		this.ANALYTICS = env.ANALYTICS;
 		this.PASSWORD = env.PASSWORD;
 		this.STORE = new (function (SQL) {
 			let stmt = null;
+
+			// 创建主表
 			SQL.prepare(
-				"CREATE TABLE IF NOT EXISTS shorten (key TEXT PRIMARY KEY, value TEXT, creation INTEGER DEFAULT (strftime('%s', 'now')))"
+				"CREATE TABLE IF NOT EXISTS slug (key TEXT PRIMARY KEY, value TEXT, creation INTEGER DEFAULT (strftime('%s', 'now')))"
 			).run();
+
 			this.value = async (key) => {
-				stmt = SQL.prepare('SELECT value FROM shorten WHERE key = ? LIMIT 1').bind(key);
+				stmt = SQL.prepare('SELECT value FROM slug WHERE key = ? LIMIT 1').bind(key);
 				const val = await stmt.first('value');
 				return val;
 			};
 			this.count = async ({ where }) => {
 				where = where || '1=1';
-				stmt = SQL.prepare(`SELECT COUNT(*) as count FROM shorten WHERE key <> 'token' AND ${where}`);
+				stmt = SQL.prepare(`SELECT COUNT(*) as count FROM slug WHERE key <> 'token' AND ${where}`);
 				const val = await stmt.first('count');
 				return val;
 			};
@@ -29,19 +30,19 @@ export default class Utils {
 				orderby = orderby || 'creation';
 				rows = rows || 10;
 				page = Math.max(page - 1, 0) * rows;
-				stmt = SQL.prepare(`SELECT * FROM shorten WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${rows} OFFSET ${page}`);
+				stmt = SQL.prepare(`SELECT * FROM slug WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${rows} OFFSET ${page}`);
 				return await stmt.all();
 			};
 			this.put = async (key, value) => {
 				if (await this.value(key)) {
-					stmt = SQL.prepare('UPDATE shorten SET value = ?1 WHERE key = ?2').bind(value, key);
+					stmt = SQL.prepare('UPDATE slug SET value = ?1 WHERE key = ?2').bind(value, key);
 				} else {
-					stmt = SQL.prepare('INSERT INTO shorten (key, value) VALUES (?1, ?2)').bind(key, value);
+					stmt = SQL.prepare('INSERT INTO slug (key, value) VALUES (?1, ?2)').bind(key, value);
 				}
 				return await stmt.run();
 			};
 			this.delete = async (key) => {
-				stmt = await SQL.prepare('DELETE FROM shorten WHERE key = ?').bind(key);
+				stmt = await SQL.prepare('DELETE FROM slug WHERE key = ?').bind(key);
 				return await stmt.run();
 			};
 		})(env.SQLITE);
@@ -54,38 +55,17 @@ export default class Utils {
 		return hexString;
 	}
 
-	async Shorten(len) {
+	async Slug(len) {
 		len = len || 6;
 		// remind: about 61 million combinations
 		const seed = 'QWERTYUIOPASDFGHJKLZXCVBNM1234567890qwertyuiopasdfghjklzxcvbnm';
 		const seedLen = seed.length;
-		let shorten = '';
+		let slug = '';
 		for (let i = 0; i < len; i++) {
-			shorten += seed.charAt(Math.floor(Math.random() * seedLen));
+			slug += seed.charAt(Math.floor(Math.random() * seedLen));
 		}
-		if (await this.STORE.value(shorten)) return this.Shorten(len);
-		return shorten;
-	}
-
-	async DataPoint(index) {
-		const CF = this.request.cf;
-		const HD = this.request.headers;
-		this.ANALYTICS.writeDataPoint({
-			blobs: [
-				CF.colo,
-				CF.country,
-				CF.city,
-				CF.region,
-				CF.timezone,
-				CF.postalCode,
-				CF.asn,
-				HD.get('cf-connecting-ip'),
-				HD.get('User-Agent'),
-				HD.get('accept-language'),
-			],
-			doubles: [CF.metroCode, CF.longitude, CF.latitude],
-			indexes: [index],
-		});
+		if (await this.STORE.value(slug)) return this.Slug(len);
+		return slug;
 	}
 
 	async Cookie() {
@@ -111,17 +91,32 @@ export default class Utils {
 		}
 	}
 
-	async Counter(shorten) {
-		this.ParseFirst(shorten).then((obj) => {
-			obj.clicks++;
-			this.STORE.put(
-				shorten,
-				JSON.stringify({
-					...obj,
-					clicks: obj.clicks,
-				})
-			);
-		});
+	// 获取点击计数
+	async getClicks(slug_key) {
+		try {
+			const data = await this.ParseFirst(slug_key);
+			return data.clicks || 0;
+		} catch (error) {
+			console.error('Failed to get clicks:', error);
+			return 0;
+		}
+	}
+
+	// 优化的计数器函数 - 确保数据一致性
+	async Counter(slug) {
+		try {
+			const obj = await this.ParseFirst(slug);
+			const newClicks = (obj.clicks || 0) + 1;
+
+			// 更新数据库中的计数
+			const result = await this.STORE.put(slug, JSON.stringify({ ...obj, clicks: newClicks }));
+
+			return result;
+		} catch (error) {
+			console.error('Counter update failed:', error);
+			// 即使更新失败，也不要阻断用户访问
+			return { success: false, error: error.message };
+		}
 	}
 
 	// format json string to object

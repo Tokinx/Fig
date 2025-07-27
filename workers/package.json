@@ -1,13 +1,16 @@
 {
-  "name": "short",
-  "version": "0.0.0",
+  "name": "fig",
+  "version": "0.0.1",
   "devDependencies": {
-    "wrangler": "latest"
+    "wrangler": "4"
   },
   "private": true,
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev"
+  },
+  "dependencies": {
+    "hono": "^4.8.9"
   }
 }

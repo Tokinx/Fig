@@ -25,7 +25,6 @@ dist-ssr
 
 bun.lockb
 package-lock.json
-wrangler.toml
 wrangler.local.toml
 x.js
 

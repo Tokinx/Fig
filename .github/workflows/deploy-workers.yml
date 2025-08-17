@@ -50,8 +50,7 @@ jobs:
       - name: 创建生产环境配置
         run: |
           cd workers
-          cp wrangler.toml wrangler.toml.backup
-          # 移除敏感信息，使用环境变量替代
+          # 直接创建生产环境的wrangler.toml配置文件
           cat > wrangler.toml << EOF
           name = "${{ vars.WORKER_NAME || 'fig' }}"
           main = "src/worker.js"
@@ -77,6 +76,7 @@ jobs:
           binding = "ANALYTICS"
           dataset = "${{ vars.ANALYTICS_DATASET || 'fig_url_analytics' }}"
           EOF
+          echo "✅ 生产环境配置文件已创建"
 
       - name: 验证配置文件
         run: |
@@ -101,10 +101,10 @@ jobs:
         if: always()
         run: |
           cd workers
-          # 恢复原始配置文件
-          if [ -f wrangler.toml.backup ]; then
-            mv wrangler.toml.backup wrangler.toml
-            echo "🔧 已恢复原始配置文件"
+          # 删除临时生成的配置文件
+          if [ -f wrangler.toml ]; then
+            rm wrangler.toml
+            echo "🔧 已清理临时配置文件"
           fi
 
       - name: 部署状态通知

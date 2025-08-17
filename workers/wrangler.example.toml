@@ -1,4 +1,11 @@
-name = "fig-dev"
+# wrangler.toml 示例配置文件
+# 
+# 本文件展示了项目的完整配置结构，包含本地开发和生产部署的说明
+# 复制此文件为 wrangler.toml 并根据您的环境修改配置
+#
+# 重要：生产部署通过GitHub Actions自动配置，无需手动管理敏感信息
+
+name = "fig-dev"  # 本地开发时的Worker名称，生产环境通过GitHub Variables设置
 main = "src/worker.js"
 compatibility_date = "2024-01-04"
 workers_dev = true
@@ -6,25 +13,52 @@ workers_dev = true
 [placement]
 mode = "smart"
 
+# ===================================
 # 本地开发环境变量
-# 注意：这些是示例值，请根据您的实际环境修改
+# ===================================
 [vars]
-PASSWORD = "dev-password-change-me"
-THEME = "http://localhost:5173"
-SLUG_LENGTH = 5
+PASSWORD = "dev-password-change-me"    # 本地开发密码，生产环境通过WORKER_PASSWORD Secret设置
+THEME = "http://localhost:5173"        # 本地前端地址，生产环境自动使用GitHub Pages或THEME_URL Variable
+SLUG_LENGTH = 5                        # 短链接长度，生产环境通过SLUG_LENGTH Variable设置（可选）
 
-# 本地开发需要配置以下变量（请取消注释并填入真实值）
-# CF_API_TOKEN = "your-dev-api-token" 
-# CF_ACCOUNT_ID = "your-account-id"
+# 本地开发可选配置（请取消注释并填入真实值）
+# CF_API_TOKEN = "your-dev-api-token"   # 本地API Token，生产环境通过CF_API_TOKEN Secret设置
+# CF_ACCOUNT_ID = "your-account-id"     # 账户ID，生产环境通过CF_ACCOUNT_ID Secret设置
 
-# 开发环境数据库（建议使用独立的开发数据库）
-# 请取消注释并配置您的开发数据库
-# [[d1_databases]]
-# binding = "SQLITE" 
-# database_name = "slug-dev"
-# database_id = "your-dev-database-id"
+# ===================================
+# D1 数据库配置
+# ===================================
+# 本地开发数据库（建议使用独立的开发数据库）
+# 取消注释并配置您的开发数据库
+[[d1_databases]]
+binding = "SQLITE"
+database_name = "slug-dev"              # 本地数据库名，生产环境通过D1_DATABASE_NAME Variable设置
+# database_id = "your-dev-database-id"  # 本地数据库ID，生产环境通过D1_DATABASE_ID Secret设置
 
-# 开发环境Analytics（可选）
+# ===================================
+# Analytics Engine配置（可选）
+# ===================================
+# 如果需要使用Analytics功能，请取消注释
 # [[analytics_engine_datasets]]
 # binding = "ANALYTICS"
-# dataset = "fig_url_analytics_dev"
+# dataset = "fig_url_analytics_dev"     # 本地Analytics数据集，生产环境通过ANALYTICS_DATASET Variable设置
+
+# ===================================
+# 生产环境配置说明
+# ===================================
+# 生产环境配置通过GitHub Actions自动生成，使用以下GitHub Secrets/Variables：
+#
+# GitHub Secrets (敏感信息):
+# - CLOUDFLARE_API_TOKEN: Cloudflare API Token
+# - WORKER_PASSWORD: Workers应用管理员密码  
+# - CF_ACCOUNT_ID: Cloudflare Account ID
+# - D1_DATABASE_ID: D1数据库ID
+#
+# GitHub Variables (非敏感配置):
+# - WORKER_NAME: Workers应用名称（默认：fig）
+# - THEME_URL: 主题资源URL（默认：自动使用当前仓库的GitHub Pages）
+# - SLUG_LENGTH: 短链接长度（可选，不设置则使用后端默认值）
+# - D1_DATABASE_NAME: D1数据库名称（默认：slug）
+# - ANALYTICS_DATASET: Analytics数据集名称（默认：fig_url_analytics）
+#
+# 详细设置指南请参考：../.github/DEPLOY_SETUP.md

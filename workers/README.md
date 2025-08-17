@@ -40,8 +40,7 @@ GitHub Actions将在workers目录有变更时自动部署到Cloudflare Workers�
 ## 配置文件说明
 
 - `wrangler.example.toml` - 示例配置文件（已提交到仓库）
-- `wrangler.toml` - 本地开发配置文件（包含真实配置，请勿提交）
-- `wrangler.local.toml` - 本地备份配置（在.gitignore中）
+- `wrangler.toml` - 本地开发配置文件（包含真实配置，在.gitignore中）
 
 ## 安全注意事项
 

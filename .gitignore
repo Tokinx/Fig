@@ -25,7 +25,9 @@ dist-ssr
 
 bun.lockb
 package-lock.json
+# Wrangler配置文件
 wrangler.local.toml
+workers/wrangler.toml
 x.js
 
 

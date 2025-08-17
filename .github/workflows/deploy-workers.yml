@@ -62,8 +62,8 @@ jobs:
 
           [vars]
           PASSWORD = "${{ secrets.WORKER_PASSWORD }}"
-          THEME = "${{ vars.THEME_URL || 'https://tokinx.github.io/Fig/pages' }}"
-          SLUG_LENGTH = ${{ vars.SLUG_LENGTH || 5 }}
+          THEME = "${{ vars.THEME_URL || format('https://{0}.github.io/{1}/pages', github.repository_owner, github.event.repository.name) }}"
+          ${{ vars.SLUG_LENGTH && format('SLUG_LENGTH = {0}', vars.SLUG_LENGTH) || '# SLUG_LENGTH 未设置，使用默认值' }}
           CF_API_TOKEN = "${{ secrets.CF_API_TOKEN }}"
           CF_ACCOUNT_ID = "${{ secrets.CF_ACCOUNT_ID }}"
 

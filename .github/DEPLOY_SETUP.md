@@ -19,8 +19,8 @@ D1_DATABASE_ID               # D1数据库的ID
 #### Variables（非敏感配置）
 ```
 WORKER_NAME                  # Workers应用名称（默认：fig）
-THEME_URL                    # 主题资源URL（默认：https://tokinx.github.io/Fig/pages）
-SLUG_LENGTH                  # 短链接长度（默认：5）
+THEME_URL                    # 主题资源URL（默认：https://{用户名}.github.io/{仓库名}/pages）
+SLUG_LENGTH                  # 短链接长度（可选，不设置则使用后端默认值）
 D1_DATABASE_NAME             # D1数据库名称（默认：slug）
 ANALYTICS_DATASET            # Analytics数据集名称（默认：fig_url_analytics）
 ```
@@ -86,8 +86,8 @@ D1_DATABASE_ID = "27125d38-dcf0-429b-afb4-8aa3df4533af"
 ### Variables  
 ```
 WORKER_NAME = "fig"
-THEME_URL = "https://tokinx.github.io/Fig/pages"
-SLUG_LENGTH = "5"
+THEME_URL = "可选，不设置将自动使用当前仓库的pages地址"
+SLUG_LENGTH = "可选，不设置则使用后端默认值"
 D1_DATABASE_NAME = "slug" 
 ANALYTICS_DATASET = "fig_url_analytics"
 ```

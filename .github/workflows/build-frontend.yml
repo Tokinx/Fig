@@ -1,0 +1,121 @@
+name: 自动构建前端
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'web/**'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: write
+      actions: read
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 设置 Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: 缓存依赖
+        uses: actions/cache@v3
+        with:
+          path: |
+            web/node_modules
+            ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('web/bun.lockb', 'web/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: 安装依赖
+        run: |
+          cd web
+          bun install
+
+      - name: 构建前端
+        run: |
+          cd web
+          ENV=production bun run build
+
+      - name: 检查构建输出
+        run: |
+          if [ ! -d "web/dist" ]; then
+            echo "❌ 构建失败：dist目录不存在"
+            exit 1
+          fi
+          echo "✅ 构建成功，文件列表："
+          ls -la web/dist/
+
+      - name: 清理旧的pages目录
+        run: |
+          if [ -d "pages" ]; then
+            echo "🗑️ 清理旧的pages目录"
+            rm -rf pages
+          fi
+
+      - name: 重命名dist为pages
+        run: |
+          mv web/dist pages
+          echo "📁 已将web/dist重命名为pages"
+          ls -la pages/
+
+      - name: 检查是否有变更
+        id: check_changes
+        run: |
+          git add pages/
+          if git diff --staged --quiet; then
+            echo "changes=false" >> $GITHUB_OUTPUT
+            echo "📝 没有检测到pages目录的变更"
+          else
+            echo "changes=true" >> $GITHUB_OUTPUT
+            echo "📝 检测到pages目录有变更"
+          fi
+
+      - name: 配置Git用户
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: 提交变更
+        if: steps.check_changes.outputs.changes == 'true'
+        run: |
+          git add pages/
+          git commit -m "🤖 自动构建前端页面
+
+          - 基于最新的web目录代码构建
+          - 构建时间: $(date +'%Y-%m-%d %H:%M:%S UTC')
+          - 提交哈希: ${{ github.sha }}
+          
+          🤖 Generated with GitHub Actions"
+
+      - name: 推送到仓库
+        if: steps.check_changes.outputs.changes == 'true'
+        uses: ad-m/github-push-action@master
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          branch: ${{ github.ref }}
+
+      - name: 构建完成通知
+        run: |
+          if [ "${{ steps.check_changes.outputs.changes }}" == "true" ]; then
+            echo "✅ 前端构建完成并已提交到仓库"
+            echo "📦 pages目录已更新"
+          else
+            echo "✅ 前端构建完成，但没有变更需要提交"
+          fi

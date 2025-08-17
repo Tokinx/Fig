@@ -1,0 +1,10 @@
+body {
+  padding: 0;
+  margin: 0;
+  display: flex;
+  place-items: center;
+}
+#app{
+  width: 100%;
+}
+

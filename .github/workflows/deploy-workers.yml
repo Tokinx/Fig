@@ -1,0 +1,134 @@
+name: 自动部署后端到Cloudflare Workers
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'workers/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'workers/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    name: 部署到Cloudflare Workers
+    
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置 Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: 缓存依赖
+        uses: actions/cache@v3
+        with:
+          path: |
+            workers/node_modules
+            ~/.bun/install/cache
+          key: ${{ runner.os }}-workers-bun-${{ hashFiles('workers/bun.lockb', 'workers/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-workers-bun-
+
+      - name: 安装后端依赖
+        run: |
+          cd workers
+          bun install
+
+      - name: 创建生产环境配置
+        run: |
+          cd workers
+          cp wrangler.toml wrangler.toml.backup
+          # 移除敏感信息，使用环境变量替代
+          cat > wrangler.toml << EOF
+          name = "${{ vars.WORKER_NAME || 'fig' }}"
+          main = "src/worker.js"
+          compatibility_date = "2024-01-04"
+          workers_dev = true
+
+          [placement]
+          mode = "smart"
+
+          [vars]
+          PASSWORD = "${{ secrets.WORKER_PASSWORD }}"
+          THEME = "${{ vars.THEME_URL || 'https://tokinx.github.io/Fig/pages' }}"
+          SLUG_LENGTH = ${{ vars.SLUG_LENGTH || 5 }}
+          CF_API_TOKEN = "${{ secrets.CF_API_TOKEN }}"
+          CF_ACCOUNT_ID = "${{ secrets.CF_ACCOUNT_ID }}"
+
+          [[d1_databases]]
+          binding = "SQLITE"
+          database_name = "${{ vars.D1_DATABASE_NAME || 'slug' }}"
+          database_id = "${{ secrets.D1_DATABASE_ID }}"
+
+          [[analytics_engine_datasets]]
+          binding = "ANALYTICS"
+          dataset = "${{ vars.ANALYTICS_DATASET || 'fig_url_analytics' }}"
+          EOF
+
+      - name: 验证配置文件
+        run: |
+          cd workers
+          echo "📋 检查wrangler.toml配置："
+          cat wrangler.toml
+          echo "✅ 配置文件已生成"
+
+      - name: 部署到Cloudflare Workers
+        run: |
+          cd workers
+          # 设置Cloudflare API Token
+          export CLOUDFLARE_API_TOKEN="${{ secrets.CLOUDFLARE_API_TOKEN }}"
+          export CLOUDFLARE_ACCOUNT_ID="${{ secrets.CF_ACCOUNT_ID }}"
+          
+          echo "🚀 开始部署到Cloudflare Workers..."
+          bun run deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+      - name: 部署后清理
+        if: always()
+        run: |
+          cd workers
+          # 恢复原始配置文件
+          if [ -f wrangler.toml.backup ]; then
+            mv wrangler.toml.backup wrangler.toml
+            echo "🔧 已恢复原始配置文件"
+          fi
+
+      - name: 部署状态通知
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Cloudflare Workers部署成功！"
+            echo "🌐 应用地址: https://${{ vars.WORKER_NAME || 'fig' }}.${{ secrets.CF_ACCOUNT_ID }}.workers.dev"
+          else
+            echo "❌ Cloudflare Workers部署失败"
+            exit 1
+          fi
+
+      - name: 健康检查
+        if: success()
+        run: |
+          echo "🏥 进行健康检查..."
+          WORKER_URL="https://${{ vars.WORKER_NAME || 'fig' }}.${{ secrets.CF_ACCOUNT_ID }}.workers.dev"
+          
+          # 等待部署生效
+          sleep 10
+          
+          # 检查应用是否正常响应
+          if curl -f -s "$WORKER_URL" > /dev/null; then
+            echo "✅ 健康检查通过，应用正常运行"
+          else
+            echo "⚠️ 健康检查失败，请手动验证部署状态"
+          fi

@@ -23,7 +23,6 @@ dist-ssr
 *.sln
 *.sw?
 
-web/
 bun.lockb
 package-lock.json
 wrangler.toml
@@ -34,3 +33,6 @@ x.js
 CHANGELOG.md
 CLAUDE.md
 todo.md
+ANALYTICS_SETUP.md
+workers/cookies.txt
+data/

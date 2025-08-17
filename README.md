@@ -96,7 +96,7 @@ bun run deploy
 1. **创建 D1 数据库**
 ```bash
 cd workers
-wrangler d1 create shorten
+wrangler d1 create fig_url
 ```
 
 2. **配置环境变量 (wrangler.toml)**
@@ -111,7 +111,7 @@ THEME = "https://your-domain.com/pages"  # 主题资源 URL
 
 [[d1_databases]]
 binding = "SQLITE"
-database_name = "shorten"
+database_name = "fig_url"
 database_id = "your-database-id"    # 从创建 D1 数据库的输出中获取
 ```
 
@@ -119,7 +119,7 @@ database_id = "your-database-id"    # 从创建 D1 数据库的输出中获取
 ```toml
 [[analytics_engine_datasets]]
 binding = "ANALYTICS"
-dataset = "short_url_analytics"
+dataset = "fig_url_analytics"
 ```
 
 ## 📝 使用指南

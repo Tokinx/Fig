@@ -1,10 +1,12 @@
 export default class Utils {
 	request = {};
+	env = {};
 	PASSWORD = '';
 	STORE = new (function () {})();
 
 	constructor(request, env) {
 		this.request = request;
+		this.env = env; // 保存环境变量引用
 		this.PASSWORD = env.PASSWORD;
 		this.STORE = new (function (SQL) {
 			let stmt = null;
@@ -55,7 +57,11 @@ export default class Utils {
 		return hexString;
 	}
 
-	async Slug(len) {
+	async Slug(len = null) {
+		// 如果没有指定长度，从环境变量获取，默认为6
+		if (len === null) {
+			len = parseInt(this.env?.SLUG_LENGTH) || 6;
+		}
 		len = len || 6;
 		// remind: about 61 million combinations
 		const seed = 'QWERTYUIOPASDFGHJKLZXCVBNM1234567890qwertyuiopasdfghjklzxcvbnm';
@@ -88,34 +94,6 @@ export default class Utils {
 			else return false;
 		} else {
 			return false;
-		}
-	}
-
-	// 获取点击计数
-	async getClicks(slug_key) {
-		try {
-			const data = await this.ParseFirst(slug_key);
-			return data.clicks || 0;
-		} catch (error) {
-			console.error('Failed to get clicks:', error);
-			return 0;
-		}
-	}
-
-	// 优化的计数器函数 - 确保数据一致性
-	async Counter(slug) {
-		try {
-			const obj = await this.ParseFirst(slug);
-			const newClicks = (obj.clicks || 0) + 1;
-
-			// 更新数据库中的计数
-			const result = await this.STORE.put(slug, JSON.stringify({ ...obj, clicks: newClicks }));
-
-			return result;
-		} catch (error) {
-			console.error('Counter update failed:', error);
-			// 即使更新失败，也不要阻断用户访问
-			return { success: false, error: error.message };
 		}
 	}
 

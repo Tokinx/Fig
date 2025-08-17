@@ -169,34 +169,6 @@ export default class ControllerAPI {
 			data: null,
 		});
 	}
-
-	// sesame
-	async sesame() {
-		const { request } = this.utils;
-		const { slug, password } = await GetReqJson(request);
-		const data = await this.utils.ParseFirst(slug);
-		
-		if (!data || !data.url) {
-			return Response.json({ code: 1071, msg: 'Short link not found', data: null }, { status: 404 });
-		}
-		
-		if (!data.values || data.values.password !== password) {
-			return Response.json({ code: 1070, msg: 'Incorrect password', data: null }, { status: 401 });
-		}
-		
-		return Response.json(
-			{
-				code: 0,
-				msg: 'Success',
-				data: {
-					...data,
-					// hide password
-					values: { ...data.values, password: '******' },
-				},
-			},
-			{ status: 200 }
-		);
-	}
 }
 
 // Export Hono API routes as well for potential future use

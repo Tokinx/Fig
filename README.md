@@ -8,7 +8,7 @@
 - **自定义别名** - 支持自定义短链接后缀，便于记忆和品牌化
 - **密码保护** - 为敏感链接设置访问密码，增强安全性
 - **过期控制** - 设置链接的有效期，自动失效过期链接
-- **访问统计** - 实时统计链接访问次数，支持 Analytics Engine 数据收集
+- **访问统计** - 实时统计链接访问次数
 - **高级搜索** - 支持按短网址、源网址、显示名称和备注进行搜索
 - **链接管理** - 支持编辑、删除、批量管理短链接
 - **响应式设计** - 基于 Tailwind CSS，完美适配桌面端和移动端
@@ -33,7 +33,6 @@
 - **Cloudflare Workers** - 边缘计算平台，全球分布式运行
 - **Hono** - 轻量级、快速的 Web 框架
 - **D1 Database** - Cloudflare 的 SQLite 数据库，提供持久化存储
-- **Analytics Engine** - 实时数据分析和统计
 - **Wrangler** - Cloudflare 开发和部署工具
 
 ### 开发工具
@@ -63,11 +62,18 @@ bun install
 bun dev
 ```
 
-3. **安装依赖并启动后端开发服务器**
+3. **配置 wrangler.toml**
 ```bash
 cd workers
+# 复制示例配置文件
+cp wrangler.example.toml wrangler.toml
+# 编辑配置文件，填入您的实际配置
+# 注意：请不要提交包含真实API Token的配置文件
+```
+
+4. **启动后端开发服务器**
+```bash
 bun install
-# 配置 wrangler.toml 文件
 bun dev
 ```
 
@@ -93,6 +99,10 @@ bun run deploy
 
 ### Cloudflare 配置
 
+详细的生产环境配置请参考 [GitHub Actions部署指南](/.github/DEPLOY_SETUP.md)。
+
+#### 本地开发配置
+
 1. **创建 D1 数据库**
 ```bash
 cd workers
@@ -100,27 +110,38 @@ wrangler d1 create fig_url
 ```
 
 2. **配置环境变量 (wrangler.toml)**
+复制 `wrangler.example.toml` 到 `wrangler.toml` 并根据您的环境修改：
 ```toml
-name = "short"
+name = "fig-dev"  # 本地开发Worker名称
 main = "src/worker.js"
 compatibility_date = "2024-01-04"
 
 [vars]
-PASSWORD = "your-admin-password"    # 管理后台密码
-THEME = "https://your-domain.com/pages"  # 主题资源 URL
+PASSWORD = "dev-password-change-me"    # 本地开发密码
+THEME = "http://localhost:5173"        # 本地前端地址
+SLUG_LENGTH = 5                        # 短链接长度
 
 [[d1_databases]]
 binding = "SQLITE"
-database_name = "fig_url"
-database_id = "your-database-id"    # 从创建 D1 数据库的输出中获取
+database_name = "slug-dev"             # 本地数据库名
+database_id = "your-dev-database-id"   # 从创建D1数据库的输出中获取
 ```
 
-3. **Analytics Engine 配置 (可选)**
-```toml
-[[analytics_engine_datasets]]
-binding = "ANALYTICS"
-dataset = "fig_url_analytics"
-```
+#### 生产环境配置
+
+生产环境通过GitHub Actions自动配置，使用以下GitHub Secrets/Variables：
+
+**GitHub Secrets (敏感信息):**
+- `CLOUDFLARE_API_TOKEN`: Cloudflare API Token
+- `WORKER_PASSWORD`: Workers应用管理员密码  
+- `CF_ACCOUNT_ID`: Cloudflare Account ID
+- `D1_DATABASE_ID`: D1数据库ID
+
+**GitHub Variables (非敏感配置):**
+- `WORKER_NAME`: Workers应用名称（默认：fig）
+- `THEME_URL`: 主题资源URL（默认：自动使用当前仓库的GitHub Pages）
+- `SLUG_LENGTH`: 短链接长度（可选，不设置则使用后端默认值）
+- `D1_DATABASE_NAME`: D1数据库名称（默认：slug）
 
 ## 📝 使用指南
 
@@ -184,10 +205,14 @@ Fig/
 │   │   ├── api.js         # API 控制器和业务逻辑
 │   │   └── utils.js       # 工具函数和数据库操作
 │   ├── package.json       # 后端依赖配置
-│   └── wrangler.toml      # Cloudflare Workers 配置
+│   ├── wrangler.example.toml  # 配置文件示例
+│   └── README.md          # 后端开发说明
 ├── pages/                 # 前端构建输出目录 (自动生成)
 │   ├── assets/           # 构建后的静态资源
 │   └── index.html        # 入口 HTML 文件
+├── .github/              # GitHub Actions 配置
+│   ├── workflows/        # CI/CD 工作流
+│   └── DEPLOY_SETUP.md   # 部署设置指南
 └── CLAUDE.md             # Claude Code 项目配置
 ```
 
@@ -225,6 +250,13 @@ wrangler d1 create <name>  # 创建 D1 数据库
 
 ### 部署流程
 
+#### 自动部署（推荐）
+项目配置了GitHub Actions自动部署功能：
+1. **配置GitHub Secrets和Variables** - 按照 [部署设置指南](/.github/DEPLOY_SETUP.md) 配置必要的环境变量
+2. **推送代码** - 推送到main分支会自动触发部署
+3. **监控部署** - 在GitHub Actions页面查看部署状态
+
+#### 手动部署
 1. **前端构建** - 运行 `bun run build` 会清理并重新生成 `/pages/assets` 目录
 2. **配置 wrangler.toml** - 设置环境变量和数据库绑定
 3. **部署 Workers** - 运行 `bun run deploy` 部署到 Cloudflare
@@ -232,11 +264,11 @@ wrangler d1 create <name>  # 创建 D1 数据库
 
 ### 开发建议
 
-- 使用 ESLint 和 Prettier 保持代码风格一致
 - 前端组件遵循 shadcn/vue 组件模式
 - API 接口采用 RESTful 设计原则
 - 数据库操作通过 Utils 类统一管理
-- 使用 TypeScript 提供更好的类型安全 (可选升级)
+- 本地开发建议使用独立的数据库和API Token
+- 遵循项目已有的代码风格和架构模式
 
 ## 🔒 安全特性
 

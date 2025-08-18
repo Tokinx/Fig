@@ -10,9 +10,9 @@
 
 #### Secrets（敏感信息）
 ```
-CLOUDFLARE_API_TOKEN          # Cloudflare API Token（Global API Key或Custom Token）
 WORKER_PASSWORD              # Workers应用的管理员密码
-CF_ACCOUNT_ID                # 您的Cloudflare Account ID  
+CF_API_TOKEN                 # Cloudflare API Token（Global API Key或Custom Token）
+CF_ACCOUNT_ID                # 您的Cloudflare Account ID
 D1_DATABASE_ID               # D1数据库的ID
 ```
 
@@ -77,7 +77,7 @@ ANALYTICS_DATASET            # Analytics数据集名称（默认：fig_url_analy
 
 ### Secrets
 ```
-CLOUDFLARE_API_TOKEN = "您的新API Token"
+CF_API_TOKEN = "您的新API Token"
 WORKER_PASSWORD = "Fig@1234"  # 或设置新密码
 CF_ACCOUNT_ID = "bc920e7436485b250ead34a515fed181"
 D1_DATABASE_ID = "27125d38-dcf0-429b-afb4-8aa3df4533af"

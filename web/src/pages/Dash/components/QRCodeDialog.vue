@@ -1,6 +1,6 @@
 <script setup>
-import { ref, watch } from 'vue';
-import QRCode from 'qrcode';
+import { ref, watch } from "vue";
+import QRCode from "qrcode";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,19 +12,19 @@ import { useToast } from "@/components/ui/toast/use-toast";
 const props = defineProps({
   visible: {
     type: Boolean,
-    default: false
+    default: false,
   },
   shortUrl: {
     type: String,
-    default: ''
-  }
+    default: "",
+  },
 });
 
-const emit = defineEmits(['update:visible']);
+const emit = defineEmits(["update:visible"]);
 
 const { toast } = useToast();
 
-const qrCodeDataUrl = ref('');
+const qrCodeDataUrl = ref("");
 const qrCodeSize = ref(256);
 const loading = ref(false);
 
@@ -38,15 +38,15 @@ const generateQRCode = async () => {
       width: qrCodeSize.value,
       margin: 2,
       color: {
-        dark: '#000000',
-        light: '#FFFFFF'
+        dark: "#000000",
+        light: "#FFFFFF",
       },
-      errorCorrectionLevel: 'M'
+      errorCorrectionLevel: "M",
     };
 
     qrCodeDataUrl.value = await QRCode.toDataURL(props.shortUrl, options);
   } catch (error) {
-    console.error('生成QR码失败:', error);
+    console.error("生成QR码失败:", error);
     toast({
       title: "生成失败",
       description: "QR码生成失败，请重试",
@@ -65,8 +65,8 @@ watch(() => qrCodeSize.value, generateQRCode);
 const downloadQRCode = () => {
   if (!qrCodeDataUrl.value) return;
 
-  const link = document.createElement('a');
-  link.download = `qrcode-${props.shortUrl.replace(/[^a-zA-Z0-9]/g, '_')}.png`;
+  const link = document.createElement("a");
+  link.download = `qrcode-${props.shortUrl.replace(/[^a-zA-Z0-9]/g, "_")}.png`;
   link.href = qrCodeDataUrl.value;
   document.body.appendChild(link);
   link.click();
@@ -87,7 +87,7 @@ const copyShortUrl = async () => {
       description: "短链接已复制到剪贴板",
     });
   } catch (error) {
-    console.error('复制链接失败:', error);
+    console.error("复制链接失败:", error);
     toast({
       title: "复制失败",
       description: "链接复制失败，请手动复制",
@@ -98,7 +98,7 @@ const copyShortUrl = async () => {
 
 // 关闭对话框
 const closeDialog = () => {
-  emit('update:visible', false);
+  emit("update:visible", false);
 };
 </script>
 
@@ -131,17 +131,28 @@ const closeDialog = () => {
         <div class="flex flex-col items-center space-y-4">
           <Card class="p-4 flex justify-center">
             <CardContent class="p-0">
-              <div v-if="loading" class="flex items-center justify-center"
-                :style="{ width: qrCodeSize + 'px', height: qrCodeSize + 'px' }">
+              <div
+                v-if="loading"
+                class="flex items-center justify-center"
+                :style="{ width: qrCodeSize + 'px', height: qrCodeSize + 'px' }"
+              >
                 <div class="flex flex-col items-center gap-2">
                   <i class="icon-[material-symbols--progress-activity] animate-spin text-2xl" />
                   <span class="text-sm text-gray-500">生成中...</span>
                 </div>
               </div>
-              <img v-else-if="qrCodeDataUrl" :src="qrCodeDataUrl" :alt="`QR码: ${shortUrl}`" class="block mx-auto"
-                :style="{ width: qrCodeSize + 'px', height: qrCodeSize + 'px' }" />
-              <div v-else class="flex items-center justify-center bg-gray-100 rounded"
-                :style="{ width: qrCodeSize + 'px', height: qrCodeSize + 'px' }">
+              <img
+                v-else-if="qrCodeDataUrl"
+                :src="qrCodeDataUrl"
+                :alt="`QR码: ${shortUrl}`"
+                class="block mx-auto"
+                :style="{ width: qrCodeSize + 'px', height: qrCodeSize + 'px' }"
+              />
+              <div
+                v-else
+                class="flex items-center justify-center bg-gray-100 rounded"
+                :style="{ width: qrCodeSize + 'px', height: qrCodeSize + 'px' }"
+              >
                 <span class="text-gray-500">暂无QR码</span>
               </div>
             </CardContent>
@@ -153,16 +164,28 @@ const closeDialog = () => {
               <i class="icon-[material-symbols--download] mr-1 text-lg" />
               下载
             </Button>
-            <Button variant="outline" size="sm" :class="[qrCodeSize === 128 && 'bg-primary text-primary-foreground']"
-              @click="qrCodeSize = 128">
+            <Button
+              variant="outline"
+              size="sm"
+              :class="[qrCodeSize === 128 && 'bg-primary text-primary-foreground']"
+              @click="qrCodeSize = 128"
+            >
               小
             </Button>
-            <Button variant="outline" size="sm" :class="[qrCodeSize === 256 && 'bg-primary text-primary-foreground']"
-              @click="qrCodeSize = 256">
+            <Button
+              variant="outline"
+              size="sm"
+              :class="[qrCodeSize === 256 && 'bg-primary text-primary-foreground']"
+              @click="qrCodeSize = 256"
+            >
               中
             </Button>
-            <Button variant="outline" size="sm" :class="[qrCodeSize === 512 && 'bg-primary text-primary-foreground']"
-              @click="qrCodeSize = 512">
+            <Button
+              variant="outline"
+              size="sm"
+              :class="[qrCodeSize === 512 && 'bg-primary text-primary-foreground']"
+              @click="qrCodeSize = 512"
+            >
               大
             </Button>
           </div>

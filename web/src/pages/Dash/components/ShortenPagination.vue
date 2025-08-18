@@ -41,16 +41,8 @@ const pagination = ref(props.pagination);
       <PaginationFirst />
       <PaginationPrev />
       <template v-for="(item, index) in items">
-        <PaginationListItem
-          v-if="item.type === 'page'"
-          :key="index"
-          :value="item.value"
-          as-child
-        >
-          <Button
-            size="icon"
-            :variant="item.value === page ? 'default' : 'outline'"
-          >
+        <PaginationListItem v-if="item.type === 'page'" :key="index" :value="item.value" as-child>
+          <Button size="icon" :variant="item.value === page ? 'default' : 'outline'">
             {{ item.value }}
           </Button>
         </PaginationListItem>

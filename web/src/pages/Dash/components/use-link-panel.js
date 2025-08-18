@@ -21,7 +21,7 @@ const modeList = [
   {
     value: "remind",
     label: "提醒",
-    description: "用户可自行决定是否打开目标链接",
+    description: "用户访问时显示目标地址和备注信息",
   },
   {
     value: "cloaking",
@@ -31,7 +31,7 @@ const modeList = [
   {
     value: "proxy",
     label: "代理",
-    description: "通过服务器加载目标地址并显示",
+    description: "通过服务器加载目标地址，同时代理子路径",
   },
 ];
 

@@ -49,8 +49,8 @@ database_name = "slug-dev"              # 本地数据库名，生产环境通�
 # 生产环境配置通过GitHub Actions自动生成，使用以下GitHub Secrets/Variables：
 #
 # GitHub Secrets (敏感信息):
-# - CLOUDFLARE_API_TOKEN: Cloudflare API Token
 # - WORKER_PASSWORD: Workers应用管理员密码  
+# - CF_API_TOKEN: Cloudflare API Token
 # - CF_ACCOUNT_ID: Cloudflare Account ID
 # - D1_DATABASE_ID: D1数据库ID
 #

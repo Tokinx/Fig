@@ -130,8 +130,8 @@ database_id = "your-dev-database-id"   # 从创建D1数据库的输出中获取
 生产环境通过GitHub Actions自动配置，使用以下GitHub Secrets/Variables：
 
 **GitHub Secrets (敏感信息):**
-- `CLOUDFLARE_API_TOKEN`: Cloudflare API Token
-- `WORKER_PASSWORD`: Workers应用管理员密码  
+- `WORKER_PASSWORD`: Workers应用管理员密码
+- `CF_API_TOKEN`: Cloudflare API Token
 - `CF_ACCOUNT_ID`: Cloudflare Account ID
 - `D1_DATABASE_ID`: D1数据库ID
 

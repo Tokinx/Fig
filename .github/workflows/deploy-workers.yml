@@ -86,16 +86,9 @@ jobs:
           echo "✅ 配置文件已生成"
 
       - name: 部署到Cloudflare Workers
-        run: |
-          cd workers
-          # 设置Cloudflare API Token
-          export CLOUDFLARE_API_TOKEN="${{ secrets.CF_API_TOKEN }}"
-          export CLOUDFLARE_ACCOUNT_ID="${{ secrets.CF_ACCOUNT_ID }}"
-          
-          echo "🚀 开始部署到Cloudflare Workers..."
-          bun run deploy
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CF_API_TOKEN }}
 
       - name: 部署后清理
         if: always()

@@ -97,7 +97,7 @@ bun run deploy
 
 ### Cloudflare 配置
 
-详细的生产环境配置请参考 [GitHub Actions部署指南](/.github/DEPLOY_SETUP.md)。
+详细的生产环境配置请参考 [GitHub Actions部署指南](/docs/DEPLOY_SETUP.md)。
 
 #### 本地开发配置
 
@@ -180,31 +180,31 @@ Fig/
 ├── web/                    # 前端 Vue 3 项目
 │   ├── src/
 │   │   ├── components/     # Vue 组件
-│   │   │   ├── ui/        # shadcn/vue UI 组件
-│   │   │   └── Alert/     # 自定义提醒组件
-│   │   ├── pages/         # 页面组件
-│   │   │   ├── Home/      # 登录页面
-│   │   │   ├── Dash/      # 仪表板页面
-│   │   │   └── 404/       # 404 页面
-│   │   ├── lib/           # 工具函数和配置
-│   │   └── assets/        # 静态资源
-│   ├── package.json       # 前端依赖配置
-│   └── vite.config.js     # Vite 构建配置
-├── workers/               # 后端 Cloudflare Workers 项目
+│   │   │   ├── ui/         # shadcn/vue UI 组件
+│   │   │   └── Alert/      # 自定义提醒组件
+│   │   ├── pages/          # 页面组件
+│   │   │   ├── Home/       # 登录页面
+│   │   │   ├── Dash/       # 仪表板页面
+│   │   │   └── 404/        # 404 页面
+│   │   ├── lib/            # 工具函数和配置
+│   │   └── assets/         # 静态资源
+│   ├── package.json        # 前端依赖配置
+│   └── vite.config.js      # Vite 构建配置
+├── workers/                # 后端 Cloudflare Workers 项目
 │   ├── src/
-│   │   ├── worker.js      # 主入口和路由处理
-│   │   ├── api.js         # API 控制器和业务逻辑
-│   │   └── utils.js       # 工具函数和数据库操作
-│   ├── package.json       # 后端依赖配置
+│   │   ├── worker.js       # 主入口和路由处理
+│   │   ├── api.js          # API 控制器和业务逻辑
+│   │   └── utils.js        # 工具函数和数据库操作
+│   ├── package.json        # 后端依赖配置
 │   ├── wrangler.example.toml  # 配置文件示例
-│   └── README.md          # 后端开发说明
-├── pages/                 # 前端构建输出目录 (自动生成)
-│   ├── assets/           # 构建后的静态资源
-│   └── index.html        # 入口 HTML 文件
-├── .github/              # GitHub Actions 配置
-│   ├── workflows/        # CI/CD 工作流
-│   └── DEPLOY_SETUP.md   # 部署设置指南
-└── CLAUDE.md             # Claude Code 项目配置
+│   └── README.md           # 后端开发说明
+├── pages/                  # 前端构建输出目录 (自动生成)
+│   ├── assets/             # 构建后的静态资源
+│   └── index.html          # 入口 HTML 文件
+├── docs/                   # 项目文档
+├── .github/                # GitHub Actions 配置
+│   ├── workflows/          # CI/CD 工作流
+└── CLAUDE.md               # Claude Code 项目配置
 ```
 
 ### API 接口
@@ -240,7 +240,7 @@ wrangler d1 create <name>  # 创建 D1 数据库
 
 #### 自动部署（推荐）
 项目配置了GitHub Actions自动部署功能：
-1. **配置GitHub Secrets和Variables** - 按照 [部署设置指南](/.github/DEPLOY_SETUP.md) 配置必要的环境变量
+1. **配置GitHub Secrets和Variables** - 按照 [部署设置指南](/docs/DEPLOY_SETUP.md) 配置必要的环境变量
 2. **推送代码** - 推送到main分支会自动触发部署
 3. **监控部署** - 在GitHub Actions页面查看部署状态
 

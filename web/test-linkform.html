@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LinkForm 组件测试</title>
+</head>
+<body>
+    <div id="app">
+        <div style="max-width: 800px; margin: 20px auto; padding: 20px;">
+            <h1>LinkForm 组件测试</h1>
+            
+            <h2>基础模式测试</h2>
+            <LinkForm 
+                v-model="formData" 
+                @submit="handleSubmit" 
+                @cancel="handleCancel"
+            />
+            
+            <h2>当前表单数据：</h2>
+            <pre>{{ JSON.stringify(formData, null, 2) }}</pre>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createApp, ref } from 'vue';
+        import { LinkForm } from '/src/components/LinkForm/index.js';
+        import { BaseData, DeepClone } from '/src/lib/link-config.js';
+
+        const app = createApp({
+            components: { LinkForm },
+            setup() {
+                const formData = ref(DeepClone(BaseData));
+
+                const handleSubmit = (result) => {
+                    console.log('Form submitted:', result);
+                    alert('表单提交成功！');
+                };
+
+                const handleCancel = () => {
+                    console.log('Form cancelled');
+                    alert('取消操作');
+                };
+
+                return {
+                    formData,
+                    handleSubmit,
+                    handleCancel
+                };
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+</html>

@@ -19,7 +19,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { state, close, modeList } from "./use-link-panel";
+import { state, close } from "./use-link-panel";
+import { modeList } from "@/lib/link-config";
 import { toast } from "@/components/ui/toast/use-toast";
 
 const originalUrl = location.host;

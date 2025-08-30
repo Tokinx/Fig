@@ -38,9 +38,9 @@ const SingIn = async (event) => {
       return;
     }
 
-    // 登录成功，跳转到 dashboard
+    // 登录成功，跳转到首页
     setTimeout(() => {
-      window.location.href = "/dash";
+      window.location.href = "/home";
     }, 100);
   } catch (error) {
     errMsg.value = "Network error, please try again";

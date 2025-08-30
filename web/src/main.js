@@ -14,15 +14,23 @@ const router = createRouter({
   routes: [
     {
       path: "/",
-      component: () => import("./pages/Home/Home.vue"),
+      component: () => import("./pages/Login/Login.vue"),
+      meta: { title: "登录" },
     },
     {
-      path: "/dash",
-      component: () => import("./pages/Dash/Dash.vue"),
+      path: "/home",
+      component: () => import("./pages/Manage/Create.vue"),
+      meta: { title: "创建短链接" },
+    },
+    {
+      path: "/manage",
+      component: () => import("./pages/Manage/Manage.vue"),
+      meta: { title: "管理短链接" },
     },
     {
       path: "/:pathMatch(.*)*",
       component: () => import("./pages/404/404.vue"),
+      meta: { title: "页面不存在" },
     },
   ],
 });

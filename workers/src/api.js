@@ -127,7 +127,7 @@ export default class ControllerAPI {
 	// get all slugs
 	async get() {
 		const { request, STORE } = this.utils;
-		const { rows, page, search } = await GetReqJson(request);
+		const { rows, page, search, mode } = await GetReqJson(request);
 		const { success, results } = await STORE.get({ rows, page });
 		const count = await STORE.count({});
 		
@@ -155,6 +155,22 @@ export default class ControllerAPI {
 				       originalUrl.includes(searchTerm) || 
 				       displayName.includes(searchTerm) || 
 				       notes.includes(searchTerm);
+			});
+			filteredCount = filteredResults.length;
+		}
+		
+		// 如果有模式筛选，进行过滤
+		if (mode && mode !== 'all') {
+			filteredResults = filteredResults.filter(item => {
+				let value = {};
+				try {
+					value = JSON.parse(item.value);
+				} catch (e) {
+					console.log(e);
+				}
+				
+				// 根据跳转模式进行筛选
+				return value.mode === mode;
 			});
 			filteredCount = filteredResults.length;
 		}

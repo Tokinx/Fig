@@ -55,27 +55,40 @@ app.get('/logout', authMiddleware, async (c) => {
 	return c.redirect('/');
 });
 
-// Dashboard route (protected)
-app.get('/dash', authMiddleware, async (c) => {
-	const isLoggedIn = c.get('isLoggedIn');
-
-	if (!isLoggedIn) {
-		return c.redirect('/');
-	}
-
-	// Serve dashboard page
-	return await servePage(c, '/dash');
-});
 
 // Root route
 app.get('/', authMiddleware, async (c) => {
 	const isLoggedIn = c.get('isLoggedIn');
 
 	if (isLoggedIn) {
-		return c.redirect('/dash');
+		return c.redirect('/home');
 	}
 
 	// Serve login page
+	return await servePage(c, '/');
+});
+
+// Home route (protected) - 创建短链接页面
+app.get('/home', authMiddleware, async (c) => {
+	const isLoggedIn = c.get('isLoggedIn');
+
+	if (!isLoggedIn) {
+		return c.redirect('/');
+	}
+
+	// Serve home page
+	return await servePage(c, '/');
+});
+
+// Manage route (protected) - 管理短链接页面
+app.get('/manage', authMiddleware, async (c) => {
+	const isLoggedIn = c.get('isLoggedIn');
+
+	if (!isLoggedIn) {
+		return c.redirect('/');
+	}
+
+	// Serve manage page
 	return await servePage(c, '/');
 });
 

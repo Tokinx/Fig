@@ -10,15 +10,17 @@ import CreateLinkDialog from "./CreateLinkDialog.vue";
 
 import { state } from "./use-link-panel";
 import { openLinkPanel } from "./use-link-panel";
+import { modeList } from "@/lib/link-config";
 
 const loading = ref(false);
 const loadingMore = ref(false);
 const tableData = ref([]);
 const pagination = ref({ count: 0, page: 1, rows: 10 });
 const currentSearch = ref('');
+const currentFilter = ref('all');
 const hasMore = ref(true);
 
-const refresh = async (searchQuery = '') => {
+const refresh = async (searchQuery = '', filterMode = 'all') => {
   const oid = Math.random().toString(36).substring(2);
   loading.value = true;
   
@@ -35,6 +37,11 @@ const refresh = async (searchQuery = '') => {
   // 如果有搜索关键词，添加到请求中
   if (searchQuery) {
     requestBody.search = searchQuery;
+  }
+
+  // 如果有筛选模式，添加到请求中
+  if (filterMode && filterMode !== 'all') {
+    requestBody.mode = filterMode;
   }
 
   fetch(`/api/?action=get`, {
@@ -82,6 +89,11 @@ const loadMore = async () => {
     requestBody.search = currentSearch.value;
   }
 
+  // 如果有筛选模式，添加到请求中
+  if (currentFilter.value && currentFilter.value !== 'all') {
+    requestBody.mode = currentFilter.value;
+  }
+
   fetch(`/api/?action=get`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -116,9 +128,23 @@ const loadMore = async () => {
 };
 
 // 搜索方法
-const search = (query) => {
+const search = (query, filterMode = 'all') => {
   currentSearch.value = query;
-  refresh(query);
+  currentFilter.value = filterMode;
+  refresh(query, filterMode);
+};
+
+// 筛选方法
+const filter = (query, filterMode) => {
+  currentSearch.value = query;
+  currentFilter.value = filterMode;
+  refresh(query, filterMode);
+};
+
+// 获取模式标签
+const getModeLabel = (mode) => {
+  const modeOption = modeList.find(m => m.value === mode);
+  return modeOption ? modeOption.label : mode;
 };
 
 // 滚动事件处理
@@ -139,15 +165,27 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
 });
 
-defineExpose({ refresh, search });
+defineExpose({ refresh, search, filter });
 </script>
 <template>
   <div class="w-full">
-    <!-- 搜索状态提示 -->
-    <div v-if="currentSearch" class="mb-6 p-4 bg-muted/50 rounded-lg">
+    <!-- 搜索/筛选状态提示 -->
+    <div v-if="currentSearch || currentFilter !== 'all'" class="mb-6 p-4 bg-muted/50 rounded-lg">
       <div class="flex items-center justify-between">
         <div class="text-sm text-muted-foreground">
-          正在搜索 "<span class="font-medium text-foreground">{{ currentSearch }}</span>"，找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+          <span v-if="currentSearch && currentFilter !== 'all'">
+            搜索 "<span class="font-medium text-foreground">{{ currentSearch }}</span>" 
+            在 <span class="font-medium text-foreground">{{ getModeLabel(currentFilter) }}</span> 类型中，
+            找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+          </span>
+          <span v-else-if="currentSearch">
+            正在搜索 "<span class="font-medium text-foreground">{{ currentSearch }}</span>"，
+            找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+          </span>
+          <span v-else-if="currentFilter !== 'all'">
+            正在筛选 <span class="font-medium text-foreground">{{ getModeLabel(currentFilter) }}</span> 类型，
+            找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+          </span>
         </div>
       </div>
     </div>
@@ -168,13 +206,13 @@ defineExpose({ refresh, search });
         </div>
         <div class="space-y-2">
           <h3 class="text-xl font-semibold tracking-tight">
-            {{ currentSearch ? '没有找到匹配的结果' : '还没有短链接' }}
+            {{ (currentSearch || currentFilter !== 'all') ? '没有找到匹配的结果' : '还没有短链接' }}
           </h3>
           <p class="text-muted-foreground">
-            {{ currentSearch ? '尝试使用其他关键词搜索' : '点击下方按钮创建你的第一个短链接' }}
+            {{ (currentSearch || currentFilter !== 'all') ? '尝试调整搜索条件或筛选类型' : '点击下方按钮创建你的第一个短链接' }}
           </p>
         </div>
-        <div v-if="!currentSearch">
+        <div v-if="!(currentSearch || currentFilter !== 'all')">
           <Button @click="openLinkPanel" class="gap-2">
             <i class="icon-[material-symbols--add] h-4 w-4" />
             创建短链接
@@ -185,7 +223,7 @@ defineExpose({ refresh, search });
 
     <!-- 结果列表 -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      <SlugCard v-for="item in tableData" :key="item.oid" v-bind="{ item }" @refresh="() => refresh(currentSearch)" />
+      <SlugCard v-for="item in tableData" :key="item.oid" v-bind="{ item }" @refresh="() => refresh(currentSearch, currentFilter)" />
     </div>
 
     <!-- 加载更多指示器 -->

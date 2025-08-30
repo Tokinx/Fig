@@ -79,10 +79,90 @@ app.get('/', authMiddleware, async (c) => {
 	return await servePage(c, '/');
 });
 
+// Helper function to handle proxy requests
+async function handleProxyRequest(c, targetUrl, slug = null) {
+	// Forward query parameters
+	const searchParams = new URL(c.req.url).searchParams;
+	const finalUrl = new URL(targetUrl);
+	for (const [key, value] of searchParams) {
+		finalUrl.searchParams.set(key, value);
+	}
+
+	// Create request with same method, headers, and body
+	const requestInit = {
+		method: c.req.method,
+		headers: c.req.raw.headers,
+	};
+
+	// Add body for non-GET requests
+	if (c.req.method !== 'GET' && c.req.method !== 'HEAD') {
+		requestInit.body = c.req.raw.body;
+	}
+
+	const fetchResult = await Utils.fetchWithOptions(finalUrl.toString(), requestInit);
+	
+	if (!fetchResult.success) {
+		console.error('Proxy error:', fetchResult.error);
+		return c.text('Proxy target unreachable', 502);
+	}
+	
+	// Handle HTML responses
+	if (fetchResult.isHtml) {
+		let html = await fetchResult.text();
+		
+		if (slug) {
+			// For subpath proxy, update base href and fix relative links
+			const baseUrl = targetUrl.replace(/\/[^/]*$/, '');
+			html = html.replace('<head>', `<head><base href="${baseUrl}/">`);
+			html = html.replace(/href="(?!http|\/\/|#)([^"]+)"/g, `href="/${slug}/$1"`);
+			html = html.replace(/src="(?!http|\/\/|data:)([^"]+)"/g, `src="/${slug}/$1"`);
+		} else {
+			// For direct proxy, just add base tag
+			html = html.replace('<head>', `<head><base href="${targetUrl}">`);
+		}
+		
+		return c.html(html);
+	}
+	
+	// Handle other content types
+	const cleanHeaders = Utils.cleanProxyHeaders(fetchResult.response.headers);
+	
+	return new Response(fetchResult.response.body, {
+		status: fetchResult.response.status,
+		headers: cleanHeaders,
+	});
+}
+
+// Helper function to handle short URL requests
+async function handleShortUrl(c, slug, additionalPath = '') {
+	const utils = c.get('utils');
+	const short = await utils.ParseFirst(slug);
+
+	if (!short.url) {
+		return await servePage(c, '/404', 404);
+	}
+
+	const targetUrl = Utils.buildUrlWithPath(short.url, additionalPath);
+
+	switch (short.mode) {
+		case 'redirect':
+			return c.redirect(targetUrl, 302);
+
+		case 'proxy':
+			return await handleProxyRequest(c, targetUrl, additionalPath ? slug : null);
+
+		case 'remind':
+		case 'cloaking':
+			const dynamicScript = Utils.createDynamicScript(short.mode, targetUrl, short.notes);
+			return await servePage(c, '/', 200, dynamicScript);
+
+		default:
+			return c.redirect(targetUrl, 302);
+	}
+}
+
 // Helper function to serve pages
 async function servePage(c, path, status = 200, dynamicScript = '') {
-	if (path.includes('@/pages/')) {
-	}
 	let themeUrl = `${c.env.THEME}${(path.includes('@/pages/') ? path : '/index.html').replace(/^\/pages/, '')}`;
 
 	// Development environment
@@ -90,32 +170,34 @@ async function servePage(c, path, status = 200, dynamicScript = '') {
 		themeUrl = `http://localhost:5173`;
 	}
 
-	try {
-		const response = await fetch(themeUrl);
-
-		// Inject base tag for HTML responses
-		if (response.headers.get('Content-Type')?.includes('text/html')) {
-			let html = await response.text();
-
-			// Inject dynamic script
-			if (dynamicScript) {
-				html = html.replace('/* DynamicScript */', dynamicScript);
-			}
-
-			// Fix asset paths for localhost
-			if (themeUrl.includes('localhost')) {
-				html = html.replace(/(href|src)=\"\//gi, `$1="${themeUrl}/`);
-			}
-			return c.html(html);
-		}
-		return new Response(response.body, {
-			status: response.status,
-			headers: response.headers,
-		});
-	} catch (error) {
-		console.error('Error serving page:', error);
+	const fetchResult = await Utils.fetchWithOptions(themeUrl);
+	
+	if (!fetchResult.success) {
+		console.error('Error serving page:', fetchResult.error);
 		return c.text('Page not found', 404);
 	}
+
+	// Handle HTML responses
+	if (fetchResult.isHtml) {
+		let html = await fetchResult.text();
+
+		// Inject dynamic script
+		if (dynamicScript) {
+			html = html.replace('/* DynamicScript */', dynamicScript);
+		}
+
+		// Fix asset paths for localhost
+		if (themeUrl.includes('localhost')) {
+			html = html.replace(/(href|src)=\"\//gi, `$1="${themeUrl}/`);
+		}
+		return c.html(html);
+	}
+	
+	// Handle non-HTML responses
+	return new Response(fetchResult.response.body, {
+		status: fetchResult.response.status,
+		headers: fetchResult.response.headers,
+	});
 }
 
 // 加载页面静态资源
@@ -126,65 +208,14 @@ app.get('/pages/*', async (c) => {
 // 短网址 (catch-all - must be last)
 app.get('/:slug', authMiddleware, async (c) => {
 	const slug = c.req.param('slug');
-	const utils = c.get('utils');
-
-	// Check if this is a valid short URL
-	const short = await utils.ParseFirst(slug);
-
-	if (!short.url) {
-		// Not a short URL, serve 404 page
-		return await servePage(c, '/404', 404);
-	}
-
-	// Handle different modes
-	switch (short.mode) {
-		case 'redirect':
-			return c.redirect(short.url, 302);
-
-		case 'proxy':
-			const url = new URL(short.url);
-			url.pathname = url.pathname.replace(`/${slug}`, '');
-			let response = await fetch(new Request(url));
-
-			// Inject base tag for HTML responses
-			if (response.headers.get('Content-Type')?.includes('text/html')) {
-				const html = (await response.text()).replace(`<head>`, `<head><base href="${short.url}">`);
-				return c.html(html);
-			}
-			return new Response(response.body, {
-				status: response.status,
-				headers: response.headers,
-			});
-
-		case 'remind':
-		case 'cloaking':
-			const DynamicScript = `window.__PAGE__ = '${short.mode}'; window.__URL__ = '${short.url}'; window.__NOTES__ = ${JSON.stringify(
-				short.notes || ''
-			)};`;
-			// Serve the page with dynamic script
-			return await servePage(c, '/', 200, DynamicScript);
-
-		default:
-			return c.redirect(short.url, 302);
-	}
+	return await handleShortUrl(c, slug);
 });
 
 // Catch-all for short URLs with additional path segments
 app.get('/:slug/*', authMiddleware, async (c) => {
 	const slug = c.req.param('slug');
-	const path = c.req.path.replace(`/${slug}`, '');
-	const utils = c.get('utils');
-
-	// Check if this is a valid short URL
-	const short = await utils.ParseFirst(slug);
-
-	if (!short.url) {
-		// Not a short URL, serve 404 page
-		return await servePage(c, '/404', 404);
-	}
-
-	// Serve the page with dynamic script
-	return await servePage(c, short.url + path, 200, DynamicScript);
+	const additionalPath = c.req.path.replace(`/${slug}`, '');
+	return await handleShortUrl(c, slug, additionalPath);
 });
 
 export default app;

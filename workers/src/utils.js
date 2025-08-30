@@ -1,53 +1,60 @@
+// Database service class
+class DatabaseService {
+	constructor(sqlite) {
+		this.db = sqlite;
+		this.init();
+	}
+
+	init() {
+		this.db.prepare(
+			"CREATE TABLE IF NOT EXISTS slug (key TEXT PRIMARY KEY, value TEXT, creation INTEGER DEFAULT (strftime('%s', 'now')))"
+		).run();
+	}
+
+	async value(key) {
+		const stmt = this.db.prepare('SELECT value FROM slug WHERE key = ? LIMIT 1').bind(key);
+		return await stmt.first('value');
+	}
+
+	async count({ where = '1=1' } = {}) {
+		const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM slug WHERE key <> 'token' AND ${where}`);
+		return await stmt.first('count');
+	}
+
+	async get({ where = '1=1', orderby = 'creation', rows = 10, page = 1 } = {}) {
+		const offset = Math.max(page - 1, 0) * rows;
+		const stmt = this.db.prepare(`SELECT * FROM slug WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${rows} OFFSET ${offset}`);
+		return await stmt.all();
+	}
+
+	async put(key, value) {
+		const existingValue = await this.value(key);
+		let stmt;
+		if (existingValue) {
+			stmt = this.db.prepare('UPDATE slug SET value = ?1 WHERE key = ?2').bind(value, key);
+		} else {
+			stmt = this.db.prepare('INSERT INTO slug (key, value) VALUES (?1, ?2)').bind(key, value);
+		}
+		return await stmt.run();
+	}
+
+	async delete(key) {
+		const stmt = this.db.prepare('DELETE FROM slug WHERE key = ?').bind(key);
+		return await stmt.run();
+	}
+}
+
 export default class Utils {
 	request = {};
 	env = {};
 	PASSWORD = '';
-	STORE = new (function () {})();
+	STORE = null;
 
 	constructor(request, env) {
 		this.request = request;
-		this.env = env; // 保存环境变量引用
+		this.env = env;
 		this.PASSWORD = env.PASSWORD;
-		this.STORE = new (function (SQL) {
-			let stmt = null;
-
-			// 创建主表
-			SQL.prepare(
-				"CREATE TABLE IF NOT EXISTS slug (key TEXT PRIMARY KEY, value TEXT, creation INTEGER DEFAULT (strftime('%s', 'now')))"
-			).run();
-
-			this.value = async (key) => {
-				stmt = SQL.prepare('SELECT value FROM slug WHERE key = ? LIMIT 1').bind(key);
-				const val = await stmt.first('value');
-				return val;
-			};
-			this.count = async ({ where }) => {
-				where = where || '1=1';
-				stmt = SQL.prepare(`SELECT COUNT(*) as count FROM slug WHERE key <> 'token' AND ${where}`);
-				const val = await stmt.first('count');
-				return val;
-			};
-			this.get = async ({ where, orderby, rows, page }) => {
-				where = where || '1=1';
-				orderby = orderby || 'creation';
-				rows = rows || 10;
-				page = Math.max(page - 1, 0) * rows;
-				stmt = SQL.prepare(`SELECT * FROM slug WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${rows} OFFSET ${page}`);
-				return await stmt.all();
-			};
-			this.put = async (key, value) => {
-				if (await this.value(key)) {
-					stmt = SQL.prepare('UPDATE slug SET value = ?1 WHERE key = ?2').bind(value, key);
-				} else {
-					stmt = SQL.prepare('INSERT INTO slug (key, value) VALUES (?1, ?2)').bind(key, value);
-				}
-				return await stmt.run();
-			};
-			this.delete = async (key) => {
-				stmt = await SQL.prepare('DELETE FROM slug WHERE key = ?').bind(key);
-				return await stmt.run();
-			};
-		})(env.SQLITE);
+		this.STORE = new DatabaseService(env.SQLITE);
 	}
 
 	async SHA256(text) {
@@ -87,12 +94,11 @@ export default class Utils {
 		return value;
 	}
 
-	async CheckURL(url) {
-		const exp = new RegExp(/http(s)?:\/\/([\w-]+\.)+[\w-]+(\/[\w- .\/?%&=]*)?/);
-		if (exp.test(url) == true) {
-			if (url[0] == 'h') return true;
-			else return false;
-		} else {
+	CheckURL(url) {
+		try {
+			const urlObj = new URL(url);
+			return ['http:', 'https:'].includes(urlObj.protocol);
+		} catch {
 			return false;
 		}
 	}
@@ -110,5 +116,48 @@ export default class Utils {
 
 	async ParseFirst(key) {
 		return this.Parse(await this.STORE.value(key), {});
+	}
+
+	// HTTP and URL utility functions
+	static buildUrlWithPath(baseUrl, additionalPath) {
+		if (!additionalPath) return baseUrl;
+		return baseUrl.endsWith('/') ? baseUrl + additionalPath.substring(1) : baseUrl + additionalPath;
+	}
+
+	static createDynamicScript(mode, url, notes = '') {
+		return `window.__PAGE__ = '${mode}'; window.__URL__ = '${url}'; window.__NOTES__ = ${JSON.stringify(notes)};`;
+	}
+
+	static async fetchWithOptions(url, options = {}) {
+		try {
+			const response = await fetch(url, options);
+			const isHtml = response.headers.get('Content-Type')?.includes('text/html');
+			
+			return {
+				response,
+				isHtml,
+				text: async () => await response.text(),
+				success: response.ok
+			};
+		} catch (error) {
+			return {
+				response: null,
+				isHtml: false,
+				text: async () => '',
+				success: false,
+				error
+			};
+		}
+	}
+
+	static isHtmlResponse(response) {
+		return response?.headers.get('Content-Type')?.includes('text/html') || false;
+	}
+
+	static cleanProxyHeaders(headers) {
+		const cleanHeaders = new Headers(headers);
+		cleanHeaders.delete('content-encoding');
+		cleanHeaders.delete('content-length');
+		return cleanHeaders;
 	}
 }

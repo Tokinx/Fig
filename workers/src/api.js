@@ -5,9 +5,15 @@ const api = new Hono();
 async function GetReqJson(request) {
 	let data = {};
 	try {
-		data = (await request.json()) || {};
+		const contentType = request.headers.get('Content-Type') || '';
+		if (contentType.includes('application/json')) {
+			data = (await request.json()) || {};
+		} else if (contentType.includes('application/x-www-form-urlencoded')) {
+			const formData = await request.formData();
+			data = Object.fromEntries(formData);
+		}
 	} catch (e) {
-		console.log(e.message);
+		console.error('Failed to parse request body:', e.message);
 	}
 	return data;
 }
@@ -19,12 +25,33 @@ export default class ControllerAPI {
 		this.utils = utils;
 	}
 
+	// Response helper functions
+	createResponse(code, msg, data = null, status = 200, headers = {}) {
+		return Response.json({ code, msg, data }, { status, headers });
+	}
+
+	createErrorResponse(code, msg, status = 400) {
+		return this.createResponse(code, msg, null, status);
+	}
+
+	createSuccessResponse(data = null, msg = 'Success') {
+		return this.createResponse(0, msg, data);
+	}
+
+	createCookieResponse(code, msg, data, cookieName, cookieValue, expires = null) {
+		const cookieString = expires 
+			? `${cookieName}=${cookieValue}; path=/; expires=${new Date(expires).toUTCString()}`
+			: `${cookieName}=${cookieValue}; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+		
+		return this.createResponse(code, msg, data, 200, { 'Set-Cookie': cookieString });
+	}
+
 	async Gateway() {
 		const { request } = this.utils;
 		const url = new URL(request.url);
 		const action = String(url.searchParams.get('action'));
 		if (!this[action]) {
-			return Response.json({ code: 1000, msg: 'Invalid action.', data: null }, { status: 404 });
+			return this.createErrorResponse(1000, 'Invalid action.', 404);
 		}
 		return await this[action]();
 	}
@@ -38,48 +65,31 @@ export default class ControllerAPI {
 			const token = await SHA256(JSON.stringify([Math.random(), time]));
 			const expires = time + 86400000;
 			await STORE.put('token', JSON.stringify({ token, expires }));
-			return Response.json(
-				{ code: 0, msg: 'Success', data: token },
-				{
-					headers: {
-						'Set-Cookie': `token=${token}; path=/; expires=${new Date(expires).toUTCString()}`,
-					},
-				}
-			);
+			return this.createCookieResponse(0, 'Success', token, 'token', token, expires);
 		}
-		return Response.json({ code: 1001, msg: 'Password error.', data: null }, { status: 401 });
+		return this.createErrorResponse(1001, 'Password error.', 401);
 	}
 
 	// logout
 	async logout() {
 		const { STORE } = this.utils;
 		await STORE.delete('token');
-		return Response.json(
-			{ code: 0, msg: 'Success', data: null },
-			{
-				headers: {
-					'Set-Cookie': `token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`,
-				},
-			}
-		);
+		return this.createCookieResponse(0, 'Success', null, 'token', '');
 	}
 
 	// generate a random slug
 	async randomize() {
-		return Response.json({ code: 0, msg: 'Success', data: await this.utils.Slug() }, { status: 200 });
+		return this.createSuccessResponse(await this.utils.Slug());
 	}
 
 	async check_slug() {
 		const { request } = this.utils;
 		const { slug } = await GetReqJson(request);
 		const obj = await this.utils.ParseFirst(slug);
-		return Response.json(
-			{
-				code: obj.url ? 1040 : 0,
-				msg: obj.url ? 'Slug already exists.' : 'Success',
-				data: !!obj.url,
-			},
-			{ status: 200 }
+		return this.createResponse(
+			obj.url ? 1040 : 0,
+			obj.url ? 'Slug already exists.' : 'Success',
+			!!obj.url
 		);
 	}
 
@@ -90,8 +100,8 @@ export default class ControllerAPI {
 		let { url, slug, creation } = body;
 
 		// check if url is valid
-		if (!(await CheckURL(url))) {
-			return Response.json({ code: 1050, msg: 'Invalid URL.', data: null }, { status: 400 });
+		if (!CheckURL(url)) {
+			return this.createErrorResponse(1050, 'Invalid URL.');
 		}
 
 		// if slug is not provided, generate one
@@ -101,17 +111,17 @@ export default class ControllerAPI {
 			// check if slug already exists
 			const { url: existed } = await this.utils.ParseFirst(slug);
 			if (existed) {
-				return Response.json({ code: 1051, msg: 'Slug already exists.', data: null }, { status: 400 });
+				return this.createErrorResponse(1051, 'Slug already exists.');
 			}
 		}
 
 		// save url
 		const { success, meta: details } = await STORE.put(slug, JSON.stringify(body));
-		return Response.json({
-			code: 0,
-			msg: success ? 'Success' : JSON.stringify(details),
-			data: success ? slug : null,
-		});
+		return this.createResponse(
+			success ? 0 : 1052,
+			success ? 'Success' : JSON.stringify(details),
+			success ? slug : null
+		);
 	}
 
 	// get all slugs
@@ -150,11 +160,11 @@ export default class ControllerAPI {
 		}
 		
 		// 直接返回数据库中的结果，点击数已经通过Counter函数保持最新
-		return Response.json({
-			code: success ? 0 : 1052,
-			msg: 'Success',
-			data: { results: filteredResults, count: filteredCount, rows, page },
-		});
+		return this.createResponse(
+			success ? 0 : 1052,
+			'Success',
+			{ results: filteredResults, count: filteredCount, rows, page }
+		);
 	}
 
 	// delete a slug
@@ -163,11 +173,11 @@ export default class ControllerAPI {
 		let body = await GetReqJson(request);
 		let { slug } = body;
 		const { success, meta: details } = await STORE.delete(slug);
-		return Response.json({
-			code: success ? 0 : 1060,
-			msg: success ? 'Success' : JSON.stringify(details),
-			data: null,
-		});
+		return this.createResponse(
+			success ? 0 : 1060,
+			success ? 'Success' : JSON.stringify(details),
+			null
+		);
 	}
 }
 

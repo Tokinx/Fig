@@ -211,7 +211,7 @@ app.get('/:slug', authMiddleware, async (c) => {
 	return await handleShortUrl(c, slug);
 });
 
-// Catch-all for short URLs with additional path segments
+// 短网址子路径 (catch-all - must be last)
 app.get('/:slug/*', authMiddleware, async (c) => {
 	const slug = c.req.param('slug');
 	const additionalPath = c.req.path.replace(`/${slug}`, '');

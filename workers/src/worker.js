@@ -61,7 +61,7 @@ app.get('/', authMiddleware, async (c) => {
 	const isLoggedIn = c.get('isLoggedIn');
 
 	if (isLoggedIn) {
-		return c.redirect('/home');
+		return c.redirect('/manage');
 	}
 
 	// Serve login page

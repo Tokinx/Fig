@@ -11,6 +11,7 @@ const handleSubmit = (result) => {
     toast({
       title: state.value.formData.creation ? "更新成功" : "创建成功",
       description: `短链接 ${state.value.formData.slug} ${state.value.formData.creation ? "已更新" : "已创建"}`,
+      class: "rounded-2xl",
     });
     close(true); // 传递 true 表示成功，会触发 resolve
   } else {
@@ -18,6 +19,7 @@ const handleSubmit = (result) => {
       title: state.value.formData.creation ? "更新失败" : "创建失败",
       description: result.msg || "操作失败，请重试",
       variant: "destructive",
+      class: "rounded-2xl",
     });
   }
 };
@@ -38,22 +40,14 @@ const formData = computed({
 
 <template>
   <Dialog :open="state.visible" @update:open="(open) => !open && close(false)">
-    <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto">
-      <DialogHeader>
-        <DialogTitle class="text-xl font-semibold">
-          {{ state.formData.creation ? "编辑短链接" : "创建短链接" }}
-        </DialogTitle>
-      </DialogHeader>
-
-      <div class="pt-4">
-        <LinkForm 
-          v-model="formData"
-          :is-dialog="true"
-          :auto-slug="state.isCreate"
-          @submit="handleSubmit" 
-          @cancel="handleCancel"
-        />
-      </div>
+    <DialogContent class="max-w-2xl max-h-[90vh] overflow-y-auto shadow-none p-2 border-0 bg-transparent">
+      <LinkForm
+        v-model="formData"
+        :is-dialog="true"
+        :auto-slug="state.isCreate"
+        @submit="handleSubmit"
+        @cancel="handleCancel"
+      />
     </DialogContent>
   </Dialog>
 </template>

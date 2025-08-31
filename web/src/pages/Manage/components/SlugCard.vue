@@ -45,7 +45,7 @@ const qrCodeVisible = ref(false);
 const operates = [
   {
     name: "Edit",
-    icon: "icon-[material-symbols--edit]",
+    icon: "icon-[material-symbols--edit-document-outline]",
     operate: "edit",
   },
   {
@@ -55,12 +55,12 @@ const operates = [
   },
   {
     name: "Duplicate",
-    icon: "icon-[material-symbols--content-copy]",
+    icon: "icon-[material-symbols--file-copy-outline]",
     operate: "duplicate",
   },
   {
     name: "Delete",
-    icon: "icon-[material-symbols--delete]",
+    icon: "icon-[material-symbols--delete-outline]",
     operate: "delete",
     class: "!text-destructive hover:!bg-destructive hover:!text-destructive-foreground",
   },
@@ -68,7 +68,7 @@ const operates = [
 
 const emitRefresh = () => {
   emit("refresh");
-  toast({ title: "操作成功", description: `短链接 ${item.value.slug} 已更新` });
+  toast({ title: "操作成功", description: `短链接 ${item.value.slug} 已更新`, class: "rounded-2xl" });
 };
 
 const handleOperate = async (operate) => {
@@ -106,14 +106,19 @@ const handleOperate = async (operate) => {
         .then((rv) => {
           console.log(rv);
           if (rv.code === 0) {
-            toast({ title: "删除成功", description: `短链接 ${item.value.slug} 已删除` });
+            toast({ title: "删除成功", description: `短链接 ${item.value.slug} 已删除`, class: "rounded-2xl" });
             emit("refresh");
           } else {
-            toast({ title: "删除失败", description: rv.msg || "删除操作失败，请重试", variant: "destructive" });
+            toast({
+              title: "删除失败",
+              description: rv.msg || "删除操作失败，请重试",
+              variant: "destructive",
+              class: "rounded-2xl",
+            });
           }
         })
         .catch(() => {
-          toast({ title: "删除失败", description: "网络错误，请重试", variant: "destructive" });
+          toast({ title: "删除失败", description: "网络错误，请重试", variant: "destructive", class: "rounded-2xl" });
         });
       break;
     default:

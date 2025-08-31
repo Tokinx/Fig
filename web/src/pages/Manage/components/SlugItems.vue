@@ -170,7 +170,7 @@ defineExpose({ refresh, search, filter });
 <template>
   <div class="w-full">
     <!-- 搜索/筛选状态提示 -->
-    <div v-if="currentSearch || currentFilter !== 'all'" class="mb-6 p-4 bg-muted/50 rounded-lg">
+    <div v-if="currentSearch" class="mb-6 p-4 bg-muted/50 rounded-lg">
       <div class="flex items-center justify-between">
         <div class="text-sm text-muted-foreground">
           <span v-if="currentSearch && currentFilter !== 'all'">

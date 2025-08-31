@@ -18,11 +18,6 @@ const router = createRouter({
       meta: { title: "登录" },
     },
     {
-      path: "/home",
-      component: () => import("./pages/Manage/Create.vue"),
-      meta: { title: "创建短链接" },
-    },
-    {
       path: "/manage",
       component: () => import("./pages/Manage/Manage.vue"),
       meta: { title: "管理短链接" },

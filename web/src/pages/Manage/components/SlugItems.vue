@@ -7,10 +7,13 @@ import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SlugCard from "./SlugCard.vue";
 import CreateLinkDialog from "./CreateLinkDialog.vue";
+import { useI18n } from 'vue-i18n';
 
 import { state } from "./use-link-panel";
 import { openLinkPanel } from "./use-link-panel";
-import { modeList } from "@/lib/link-config";
+import { getModeList } from "@/lib/link-config";
+
+const { t } = useI18n();
 
 const loading = ref(false);
 const loadingMore = ref(false);
@@ -143,7 +146,7 @@ const filter = (query, filterMode) => {
 
 // 获取模式标签
 const getModeLabel = (mode) => {
-  const modeOption = modeList.find(m => m.value === mode);
+  const modeOption = getModeList().find(m => m.value === mode);
   return modeOption ? modeOption.label : mode;
 };
 
@@ -174,17 +177,13 @@ defineExpose({ refresh, search, filter });
       <div class="flex items-center justify-between">
         <div class="text-sm text-muted-foreground">
           <span v-if="currentSearch && currentFilter !== 'all'">
-            搜索 "<span class="font-medium text-foreground">{{ currentSearch }}</span>" 
-            在 <span class="font-medium text-foreground">{{ getModeLabel(currentFilter) }}</span> 类型中，
-            找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+            {{ t('table.searchInType', { query: currentSearch, type: getModeLabel(currentFilter), count: pagination.count }) }}
           </span>
           <span v-else-if="currentSearch">
-            正在搜索 "<span class="font-medium text-foreground">{{ currentSearch }}</span>"，
-            找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+            {{ t('table.searchResults', { query: currentSearch, count: pagination.count }) }}
           </span>
           <span v-else-if="currentFilter !== 'all'">
-            正在筛选 <span class="font-medium text-foreground">{{ getModeLabel(currentFilter) }}</span> 类型，
-            找到 <span class="font-medium text-foreground">{{ pagination.count }}</span> 条结果
+            {{ t('table.filterResults', { type: getModeLabel(currentFilter), count: pagination.count }) }}
           </span>
         </div>
       </div>
@@ -194,7 +193,7 @@ defineExpose({ refresh, search, filter });
     <div v-if="loading" class="mb-6 text-center text-muted-foreground">
       <div class="flex items-center justify-center gap-2">
         <i class="icon-[material-symbols--progress-activity] animate-spin h-4 w-4" />
-        <span>搜索中...</span>
+        <span>{{ t('table.searching') }}</span>
       </div>
     </div>
 
@@ -206,16 +205,16 @@ defineExpose({ refresh, search, filter });
         </div>
         <div class="space-y-2">
           <h3 class="text-xl font-semibold tracking-tight">
-            {{ (currentSearch || currentFilter !== 'all') ? '没有找到匹配的结果' : '还没有短链接' }}
+            {{ (currentSearch || currentFilter !== 'all') ? t('table.noResults') : t('table.noData') }}
           </h3>
           <p class="text-muted-foreground">
-            {{ (currentSearch || currentFilter !== 'all') ? '尝试调整搜索条件或筛选类型' : '点击下方按钮创建你的第一个短链接' }}
+            {{ (currentSearch || currentFilter !== 'all') ? t('table.tryAdjustFilters') : t('table.createFirstLink') }}
           </p>
         </div>
         <div v-if="!(currentSearch || currentFilter !== 'all')">
           <Button @click="openLinkPanel" class="gap-2">
             <i class="icon-[material-symbols--add] h-4 w-4" />
-            创建短链接
+            {{ t('table.createLink') }}
           </Button>
         </div>
       </div>
@@ -230,15 +229,15 @@ defineExpose({ refresh, search, filter });
     <div v-if="tableData.length > 0" class="mt-8 text-center">
       <div v-if="loadingMore" class="flex items-center justify-center gap-2 py-4 text-muted-foreground">
         <i class="icon-[material-symbols--progress-activity] animate-spin h-4 w-4" />
-        <span>正在加载更多...</span>
+        <span>{{ t('table.loadingMore') }}</span>
       </div>
       <div v-else-if="!hasMore" class="py-4 text-muted-foreground text-sm flex items-center justify-center">
         <i class="icon-[material-symbols--check-circle] h-4 w-4 mr-1" />
-        已显示全部 {{ tableData.length }} 条记录
+        {{ t('table.allRecordsShown', { count: tableData.length }) }}
       </div>
       <div v-else class="py-4 text-muted-foreground text-sm flex items-center justify-center">
         <i class="icon-[material-symbols--keyboard-arrow-down] h-4 w-4 mr-1" />
-        向下滚动加载更多
+        {{ t('table.scrollToLoadMore') }}
       </div>
     </div>
 

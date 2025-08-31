@@ -8,7 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SlugItems from "./components/SlugItems.vue";
 import { openLinkPanel } from "./components/use-link-panel";
-import { modeList } from "@/lib/link-config";
+import { getModeList } from "@/lib/link-config";
+import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const router = useRouter();
 const originalUrl = location.host;
@@ -65,7 +69,7 @@ watch(searchQuery, (newValue) => {
 });
 
 // 获取模式选项，添加"全部"选项
-const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
+const modeOptions = [{ value: "all", label: t('common.all') }, ...getModeList()];
 </script>
 
 <template>
@@ -75,6 +79,8 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
         <div class="flex h-16 items-center justify-between">
           <div class="flex items-center gap-4">
             <h1 class="text-xl font-semibold tracking-tight">{{ originalUrl }}</h1>
+
+            <LanguageSwitcher />
           </div>
 
           <!-- 搜索框 -->
@@ -85,7 +91,7 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
               @focus="focusState = true"
               @blur="focusState = false"
               @keydown.enter="handleSearch"
-              placeholder="搜索短链接..."
+              :placeholder="t('shortLink.searchPlaceholder')"
               autocomplete="off"
               class="rounded-full pr-10"
             />
@@ -116,7 +122,7 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
         <div class="flex-1"></div>
         <!-- 筛选 -->
         <div class="flex items-start gap-1">
-          <div class="flex overflow-auto -ml-3">
+          <div class="flex overflow-auto -ml-2">
             <div v-for="option in modeOptions" :key="option.value" class="shrink-0">
               <Button
                 variant="text"
@@ -136,10 +142,12 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
           </div>
 
           <div class="flex-1"></div>
-          <Button @click="handleCreateLink" size="sm" class="gap-1 h-7 rounded-full">
-            <i class="icon-[material-symbols--flash-on] text-sm" />
-            <span >快速创建</span>
-          </Button>
+          <div class="flex items-center gap-2">
+            <Button @click="handleCreateLink" size="sm" class="gap-1 h-7 rounded-full">
+              <i class="icon-[material-symbols--flash-on] text-sm" />
+              <span>{{ t('common.create') }}</span>
+            </Button>
+          </div>
         </div>
       </div>
     </div>

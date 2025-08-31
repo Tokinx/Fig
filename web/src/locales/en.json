@@ -1,0 +1,101 @@
+{
+  "common": {
+    "language": "Language",
+    "all": "All",
+    "search": "Search",
+    "clear": "Clear",
+    "create": "Create",
+    "update": "Update",
+    "delete": "Delete",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "submit": "Submit",
+    "close": "Close",
+    "loading": "Loading...",
+    "success": "Success",
+    "error": "Error",
+    "failed": "Failed",
+    "required": "Required",
+    "optional": "Optional"
+  },
+  "auth": {
+    "login": "Login",
+    "password": "Password",
+    "enterPassword": "Enter your password",
+    "signIn": "Sign In",
+    "passwordRequired": "Password is required",
+    "passwordLength": "Password must be at least 6 characters",
+    "loginFailed": "Login failed",
+    "networkError": "Network error, please try again"
+  },
+  "navigation": {
+    "home": "Home",
+    "manage": "Manage",
+    "dashboard": "Dashboard"
+  },
+  "shortLink": {
+    "title": "Short Link",
+    "url": "URL",
+    "slug": "Slug",
+    "displayName": "Display Name",
+    "notes": "Notes",
+    "passcode": "Access Password",
+    "urlPlaceholder": "https://example.com",
+    "slugPlaceholder": "Short link",
+    "displayNamePlaceholder": "Display name",
+    "passcodePlaceholder": "Access password",
+    "notesPlaceholder": "Add some notes for this short link...",
+    "searchPlaceholder": "Search short links...",
+    "advancedSettings": "Advanced Settings",
+    "clicks": "Clicks"
+  },
+  "modes": {
+    "redirect": "Redirect",
+    "remind": "Remind",
+    "cloaking": "Cloaking",
+    "proxy": "Proxy",
+    "redirectDesc": "302 redirect to target URL",
+    "remindDesc": "Display target URL and notes when visited",
+    "cloakingDesc": "Hide target URL, show only short link",
+    "proxyDesc": "Load target URL through server, proxy sub-paths"
+  },
+  "messages": {
+    "createSuccess": "Created successfully",
+    "updateSuccess": "Updated successfully",
+    "createFailed": "Creation failed",
+    "updateFailed": "Update failed",
+    "operationFailed": "Operation failed",
+    "networkError": "Network error, please check connection and try again",
+    "generateFailed": "Generation failed",
+    "generateFailedDesc": "Unable to generate short link identifier, please enter manually",
+    "linkCreated": "Short link {slug} created",
+    "linkUpdated": "Short link {slug} updated"
+  },
+  "pages": {
+    "loginTitle": "Login",
+    "manageTitle": "Manage Short Links",
+    "notFoundTitle": "Page Not Found",
+    "notFound": "The page you are looking for does not exist.",
+    "backToHome": "Back to Home"
+  },
+  "table": {
+    "searching": "Searching...",
+    "loadingMore": "Loading more...",
+    "scrollToLoadMore": "Scroll down to load more",
+    "allRecordsShown": "All {count} records shown",
+    "noResults": "No matching results found",
+    "noData": "No short links yet",
+    "tryAdjustFilters": "Try adjusting search terms or filter types",
+    "createFirstLink": "Click the button below to create your first short link",
+    "createLink": "Create Link",
+    "searchInType": "Search \"{query}\" in {type} type, found {count} results",
+    "searchResults": "Searching \"{query}\", found {count} results",
+    "filterResults": "Filtering {type} type, found {count} results"
+  },
+  "footer": {
+    "buildOn": "Build on",
+    "poweredBy": "Powered by Cloudflare Workers"
+  }
+}

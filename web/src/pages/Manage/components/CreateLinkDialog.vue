@@ -4,9 +4,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { modeList } from "@/lib/link-config";
+import { getModeList } from "@/lib/link-config";
 import { state, close } from "./use-link-panel";
 import { toast } from "@/components/ui/toast/use-toast";
+import { useI18n } from 'vue-i18n';
+
+const { t } = useI18n();
 
 const originalUrl = location.host;
 const internalLoading = ref({ randomize: false, create: false });
@@ -43,8 +46,8 @@ const handleRandomize = async () => {
   } catch (error) {
     console.error("Failed to generate slug:", error);
     toast({
-      title: "生成失败",
-      description: "无法生成短链接标识符，请手动输入",
+      title: t('messages.generateFailed'),
+      description: t('messages.generateFailedDesc'),
       variant: "destructive",
       class: "rounded-2xl",
     });
@@ -75,23 +78,23 @@ const handleSubmit = async () => {
 
     if (result.code === 0) {
       toast({
-        title: formData.value.creation ? "更新成功" : "创建成功",
-        description: `短链接 ${formData.value.slug} ${formData.value.creation ? "已更新" : "已创建"}`,
+        title: formData.value.creation ? t('messages.updateSuccess') : t('messages.createSuccess'),
+        description: formData.value.creation ? t('messages.linkUpdated', { slug: formData.value.slug }) : t('messages.linkCreated', { slug: formData.value.slug }),
         class: "rounded-2xl",
       });
       close(true); // 传递 true 表示成功，会触发 resolve
     } else {
       toast({
-        title: formData.value.creation ? "更新失败" : "创建失败",
-        description: result.msg || "操作失败，请重试",
+        title: formData.value.creation ? t('messages.updateFailed') : t('messages.createFailed'),
+        description: result.msg || t('messages.operationFailed'),
         variant: "destructive",
         class: "rounded-2xl",
       });
     }
   } catch (error) {
     toast({
-      title: "操作失败",
-      description: "网络错误，请检查连接后重试",
+      title: t('messages.operationFailed'),
+      description: t('messages.networkError'),
       variant: "destructive",
       class: "rounded-2xl",
     });
@@ -138,7 +141,7 @@ watch(
               id="url"
               :model-value="formData.url"
               @update:model-value="(value) => formData = { ...formData, url: value }"
-              placeholder="https://example.com"
+              :placeholder="t('shortLink.urlPlaceholder')"
               class="resize-none rounded-2xl pb-10"
               :rows="4"
               :disabled="internalLoading.create"
@@ -146,7 +149,7 @@ watch(
             <div class="absolute bottom-2 left-2 right-2 flex">
               <div class="flex gap-1 bg-white/60 backdrop-blur rounded-full overflow-auto">
                 <Button
-                  v-for="option in modeList"
+                  v-for="option in getModeList()"
                   :key="option.value"
                   :value="option.value"
                   @click.prevent="switchMode(option.value)"
@@ -164,7 +167,7 @@ watch(
               >
                 <i v-if="internalLoading.create" class="icon-[material-symbols--refresh] animate-spin" />
                 <i v-else class="icon-[material-symbols--flash-on] text-sm" />
-                {{ formData.creation ? "更新" : "创建" }}
+                {{ formData.creation ? t('common.update') : t('common.create') }}
               </Button>
             </div>
           </div>
@@ -180,7 +183,7 @@ watch(
                 :class="['rounded-full shadow-none border-0 !bg-white !pl-2 pr-10', formData.creation && '!opacity-100 text-slate-500']"
                 :model-value="formData.slug"
                 @update:model-value="(value) => formData = { ...formData, slug: value }"
-                placeholder="短链接"
+                :placeholder="t('shortLink.slugPlaceholder')"
                 :disabled="formData.creation"
                 required
                 pattern="[a-zA-Z0-9_\-.]{1,24}"
@@ -202,7 +205,7 @@ watch(
 
             <!-- 高级设置 -->
             <Button variant="text" type="button" class="shrink-0 self-end text-xs rounded-full" @click="switchAdvanced">
-              高级设置
+              {{ t('shortLink.advancedSettings') }}
               <i
                 :class="[
                   'icon-[material-symbols--expand-more] transition-transform text-lg -mr-1',
@@ -225,7 +228,7 @@ watch(
                   class="rounded-full"
                   :model-value="formData.displayName"
                   @update:model-value="(value) => formData = { ...formData, displayName: value }"
-                  placeholder="显示名称"
+                  :placeholder="t('shortLink.displayNamePlaceholder')"
                   :disabled="internalLoading.create"
                 />
               </div>
@@ -236,7 +239,7 @@ watch(
                   class="rounded-full"
                   :model-value="formData.passcode"
                   @update:model-value="(value) => formData = { ...formData, passcode: value }"
-                  placeholder="访问密码"
+                  :placeholder="t('shortLink.passcodePlaceholder')"
                   type="password"
                   :disabled="internalLoading.create"
                 />
@@ -248,7 +251,7 @@ watch(
                 id="notes"
                 :model-value="formData.notes"
                 @update:model-value="(value) => formData = { ...formData, notes: value }"
-                placeholder="为这个短链接添加一些备注信息..."
+                :placeholder="t('shortLink.notesPlaceholder')"
                 class="rounded-2xl resize-none"
                 rows="4"
                 :disabled="internalLoading.create"

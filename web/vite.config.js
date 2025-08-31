@@ -1,6 +1,8 @@
 import path from "path";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
+import VueI18nPlugin from "@intlify/unplugin-vue-i18n/vite";
+import { fileURLToPath, URL } from "node:url";
 
 const base = {
   local: "/",
@@ -9,7 +11,13 @@ const base = {
 };
 
 export default defineConfig({
-  plugins: [vue()],
+  plugins: [
+    vue(),
+    VueI18nPlugin({
+      include: path.resolve(__dirname, './src/locales/**/*.json'),
+      runtimeOnly: false,
+    }),
+  ],
   base: process.env.ENV === "production" ? base.proxy : base.local,
   build: {
     outDir: "dist",

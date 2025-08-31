@@ -1,0 +1,101 @@
+{
+  "common": {
+    "language": "語言",
+    "all": "全部",
+    "search": "搜尋",
+    "clear": "清空",
+    "create": "建立",
+    "update": "更新",
+    "delete": "刪除",
+    "edit": "編輯",
+    "save": "儲存",
+    "cancel": "取消",
+    "confirm": "確認",
+    "submit": "提交",
+    "close": "關閉",
+    "loading": "載入中...",
+    "success": "成功",
+    "error": "錯誤",
+    "failed": "失敗",
+    "required": "必填",
+    "optional": "可選"
+  },
+  "auth": {
+    "login": "登入",
+    "password": "密碼",
+    "enterPassword": "請輸入密碼",
+    "signIn": "登入",
+    "passwordRequired": "密碼不能為空",
+    "passwordLength": "密碼至少需要6個字元",
+    "loginFailed": "登入失敗",
+    "networkError": "網路錯誤，請重試"
+  },
+  "navigation": {
+    "home": "首頁",
+    "manage": "管理",
+    "dashboard": "控制台"
+  },
+  "shortLink": {
+    "title": "短網址",
+    "url": "目標連結",
+    "slug": "短網址標識",
+    "displayName": "顯示名稱",
+    "notes": "備註",
+    "passcode": "存取密碼",
+    "urlPlaceholder": "https://example.com",
+    "slugPlaceholder": "短網址",
+    "displayNamePlaceholder": "顯示名稱",
+    "passcodePlaceholder": "存取密碼",
+    "notesPlaceholder": "為這個短網址新增一些備註資訊...",
+    "searchPlaceholder": "搜尋短網址...",
+    "advancedSettings": "進階設定",
+    "clicks": "點擊次數"
+  },
+  "modes": {
+    "redirect": "跳轉",
+    "remind": "提醒",
+    "cloaking": "隱藏",
+    "proxy": "代理",
+    "redirectDesc": "302 重新導向到目標地址",
+    "remindDesc": "使用者造訪時顯示目標地址和備註資訊",
+    "cloakingDesc": "隱藏目標地址，讓使用者只看到其中的短網址",
+    "proxyDesc": "透過伺服器載入目標地址，同時代理子路徑"
+  },
+  "messages": {
+    "createSuccess": "建立成功",
+    "updateSuccess": "更新成功",
+    "createFailed": "建立失敗",
+    "updateFailed": "更新失敗",
+    "operationFailed": "操作失敗",
+    "networkError": "網路錯誤，請檢查連線後重試",
+    "generateFailed": "產生失敗",
+    "generateFailedDesc": "無法產生短網址標識符，請手動輸入",
+    "linkCreated": "短網址 {slug} 已建立",
+    "linkUpdated": "短網址 {slug} 已更新"
+  },
+  "pages": {
+    "loginTitle": "登入",
+    "manageTitle": "管理短網址",
+    "notFoundTitle": "頁面不存在",
+    "notFound": "您造訪的頁面不存在。",
+    "backToHome": "返回首頁"
+  },
+  "table": {
+    "searching": "搜尋中...",
+    "loadingMore": "正在載入更多...",
+    "scrollToLoadMore": "向下捲動載入更多",
+    "allRecordsShown": "已顯示全部 {count} 條記錄",
+    "noResults": "沒有找到符合的結果",
+    "noData": "還沒有短網址",
+    "tryAdjustFilters": "嘗試調整搜尋條件或篩選類型",
+    "createFirstLink": "點擊下方按鈕建立你的第一個短網址",
+    "createLink": "建立短網址",
+    "searchInType": "搜尋 \"{query}\" 在 {type} 類型中，找到 {count} 條結果",
+    "searchResults": "正在搜尋 \"{query}\"，找到 {count} 條結果",
+    "filterResults": "正在篩選 {type} 類型，找到 {count} 條結果"
+  },
+  "footer": {
+    "buildOn": "建構於",
+    "poweredBy": "由 Cloudflare Workers 驅動"
+  }
+}

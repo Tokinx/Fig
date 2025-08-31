@@ -1,5 +1,6 @@
 import { createApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
+import { i18n } from "./locales";
 import "./style.css";
 import "./assets/index.css";
 import App from "./App.vue";
@@ -15,20 +16,31 @@ const router = createRouter({
     {
       path: "/",
       component: () => import("./pages/Login/Login.vue"),
-      meta: { title: "登录" },
+      meta: { titleKey: "pages.loginTitle" },
     },
     {
       path: "/manage",
       component: () => import("./pages/Manage/Manage.vue"),
-      meta: { title: "管理短链接" },
+      meta: { titleKey: "pages.manageTitle" },
     },
     {
       path: "/:pathMatch(.*)*",
       component: () => import("./pages/404/404.vue"),
-      meta: { title: "页面不存在" },
+      meta: { titleKey: "pages.notFoundTitle" },
     },
   ],
 });
+
+// 路由守卫：动态设置页面标题
+router.beforeEach((to) => {
+  if (to.meta?.titleKey) {
+    // 使用nextTick确保i18n已经完全加载
+    const { t } = i18n.global
+    document.title = t(to.meta.titleKey)
+  }
+});
+
 app.use(router);
+app.use(i18n);
 
 app.mount("#app");

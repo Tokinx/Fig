@@ -4,7 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast/use-toast";
+import { useI18n } from "vue-i18n";
 
+const { t } = useI18n();
 const password = ref("");
 const loading = ref(false);
 
@@ -14,11 +16,11 @@ const SingIn = async (event) => {
   event.preventDefault();
   if (loading.value) return; // 防止重复提交
   if (!password.value) {
-    errMsg.value = "Password is required";
+    errMsg.value = t("auth.passwordRequired");
     return;
   }
   if (password.value.length < 6 || password.value.length > 32) {
-    errMsg.value = "Password must be at least 6 characters";
+    errMsg.value = t("auth.passwordLength");
     return;
   }
   errMsg.value = ""; // 清除错误信息
@@ -34,7 +36,7 @@ const SingIn = async (event) => {
     const result = await response.json();
 
     if (result.code !== 0) {
-      errMsg.value = result.msg || "Login failed";
+      errMsg.value = result.msg || t("auth.loginFailed");
       return;
     }
 
@@ -43,7 +45,7 @@ const SingIn = async (event) => {
       location.href = "/manage";
     }, 100);
   } catch (error) {
-    errMsg.value = "Network error, please try again";
+    errMsg.value = t("auth.networkError");
     console.error("Login error:", error);
   } finally {
     setTimeout(() => {
@@ -57,20 +59,20 @@ const SingIn = async (event) => {
 <template>
   <form @submit="SingIn" class="flex flex-col gap-3">
     <div class="flex flex-col gap-1">
-      <Label> Password </Label>
       <Input
         type="password"
-        placeholder="Enter your password"
+        :placeholder="t('auth.enterPassword')"
         auto-capitalize="none"
         auto-correct="off"
+        class="rounded-full"
         :disabled="loading"
         v-model="password"
       />
       <!-- err message -->
       <div :class="['text-red-500 text-xs', { invisible: !errMsg }]">{{ errMsg || "Err message" }}</div>
     </div>
-    <Button :disabled="loading" class="w-full">
-      Sign In
+    <Button :disabled="loading" class="w-full rounded-full">
+      {{ t("auth.signIn") }}
       <i v-if="!loading" class="icon-[mingcute--arrow-right-line] text-base ml-2" />
       <i v-else class="icon-[mingcute--loading-fill] animate-spin text-base ml-2" />
     </Button>

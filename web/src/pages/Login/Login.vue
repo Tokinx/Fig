@@ -1,13 +1,21 @@
 <script setup>
 import { Card } from "@/components/ui/card";
 import UserAuthForm from "./components/UserAuthForm.vue";
+import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
+import { useI18n } from 'vue-i18n';
+
 const host = location.host;
+const { t } = useI18n();
 </script>
 
 <template>
   <div class="container px-4 relative flex-col items-center grid lg:max-w-none lg:px-0 h-screen bg-slate-100">
+    <!-- 语言切换器 -->
+    <div class="absolute top-4 right-4 z-10">
+      <LanguageSwitcher />
+    </div>
     <div class="space-y-4 w-full sm:max-w-[800px] mx-auto">
-      <Card class="flex flex-col sm:flex-row w-full min-h-[360px] bg-white shadow-sm p-4">
+      <Card class="flex flex-col sm:flex-row w-full min-h-[360px] bg-white border-0 shadow-none rounded-2xl p-4">
         <div class="mx-auto">
           <div class="h-full flex items-center justify-center px-[8%] pt-8 sm:pt-0">
             <!-- class="max-w-[300px] h-full" -->
@@ -142,7 +150,7 @@ const host = location.host;
           <div class="w-[1px] h-full border-l" />
         </div>
         <div class="mx-auto flex w-full flex-col justify-center sm:max-w-[360px] p-3 -mt-16 sm:mt-0 backdrop-blur-md">
-          <h1 class="text-4xl font-semibold tracking-tight mb-6">Login</h1>
+          <h1 class="text-4xl font-semibold tracking-tight mb-6">{{ t('auth.login') }}</h1>
           <UserAuthForm />
         </div>
       </Card>
@@ -151,7 +159,7 @@ const host = location.host;
         <span> {{ host }} 2025 © Biji.io </span>
         <div class="flex-1"></div>
         <span class="flex items-center gap-1">
-          Build on <img src="@/assets/cloudflare_workers.svg" class="h-3" alt="Cloudflare Workers" /> Cloudflare Workers
+          {{ t('footer.buildOn') }} <img src="@/assets/cloudflare_workers.svg" class="h-3" alt="Cloudflare Workers" /> {{ t('footer.poweredBy') }}
         </span>
       </div>
     </div>

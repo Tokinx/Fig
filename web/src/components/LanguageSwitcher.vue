@@ -8,8 +8,13 @@
         </div>
       </SelectValue>
     </SelectTrigger>
-    <SelectContent>
-      <SelectItem v-for="locale in supportedLocales" :key="locale.code" :value="locale.code">
+    <SelectContent class="p-1 rounded-2xl">
+      <SelectItem
+        v-for="locale in supportedLocales"
+        :key="locale.code"
+        :value="locale.code"
+        class="rounded-full cursor-pointer"
+      >
         <div class="flex items-center gap-2">
           <!-- <span>{{ locale.flag }}</span> -->
           <span>{{ locale.name }}</span>
@@ -33,7 +38,6 @@ const currentLocale = computed(() => {
 // 处理语言切换
 const handleLocaleChange = (localeCode) => {
   setLocale(localeCode);
-  // 刷新页面以确保所有内容都更新
-  window.location.reload();
+  // 不再刷新页面，依赖Vue i18n的响应式系统
 };
 </script>

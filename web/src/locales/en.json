@@ -95,7 +95,6 @@
     "filterResults": "Filtering {type} type, found {count} results"
   },
   "footer": {
-    "buildOn": "Build on",
-    "poweredBy": "Powered by Cloudflare Workers"
+    "buildOn": "Build on"
   }
 }

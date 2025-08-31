@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onUnmounted, nextTick } from "vue";
+import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -144,11 +144,11 @@ const filter = (query, filterMode) => {
   refresh(query, filterMode);
 };
 
-// 获取模式标签
-const getModeLabel = (mode) => {
+// 获取模式标签 - 使用计算属性确保响应式
+const getModeLabel = computed(() => (mode) => {
   const modeOption = getModeList().find(m => m.value === mode);
   return modeOption ? modeOption.label : mode;
-};
+});
 
 // 滚动事件处理
 const handleScroll = () => {
@@ -177,13 +177,13 @@ defineExpose({ refresh, search, filter });
       <div class="flex items-center justify-between">
         <div class="text-sm text-muted-foreground">
           <span v-if="currentSearch && currentFilter !== 'all'">
-            {{ t('table.searchInType', { query: currentSearch, type: getModeLabel(currentFilter), count: pagination.count }) }}
+            {{ t('table.searchInType', { query: currentSearch, type: getModeLabel.value(currentFilter), count: pagination.count }) }}
           </span>
           <span v-else-if="currentSearch">
             {{ t('table.searchResults', { query: currentSearch, count: pagination.count }) }}
           </span>
           <span v-else-if="currentFilter !== 'all'">
-            {{ t('table.filterResults', { type: getModeLabel(currentFilter), count: pagination.count }) }}
+            {{ t('table.filterResults', { type: getModeLabel.value(currentFilter), count: pagination.count }) }}
           </span>
         </div>
       </div>

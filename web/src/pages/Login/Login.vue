@@ -159,7 +159,7 @@ const { t } = useI18n();
         <span> {{ host }} 2025 © Biji.io </span>
         <div class="flex-1"></div>
         <span class="flex items-center gap-1">
-          {{ t('footer.buildOn') }} <img src="@/assets/cloudflare_workers.svg" class="h-3" alt="Cloudflare Workers" /> {{ t('footer.poweredBy') }}
+          {{ t('footer.buildOn') }} <img src="@/assets/cloudflare_workers.svg" class="h-3" alt="Cloudflare Workers" />
         </span>
       </div>
     </div>

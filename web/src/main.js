@@ -43,4 +43,7 @@ router.beforeEach((to) => {
 app.use(router);
 app.use(i18n);
 
+// 将router实例暴露给全局，用于语言切换时更新标题  
+window.router = router;
+
 app.mount("#app");

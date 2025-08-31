@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "@/components/ui/toast/use-toast";
 import { useI18n } from "vue-i18n";
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 const password = ref("");
 const loading = ref(false);
 
@@ -61,6 +61,7 @@ const SingIn = async (event) => {
     <div class="flex flex-col gap-1">
       <Input
         type="password"
+        :key="`password-${locale}`"
         :placeholder="t('auth.enterPassword')"
         auto-capitalize="none"
         auto-correct="off"

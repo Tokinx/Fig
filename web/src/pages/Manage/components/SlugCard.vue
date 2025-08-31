@@ -128,7 +128,7 @@ const handleOperate = async (operate) => {
 };
 </script>
 <template>
-  <Card class="transition-all duration-200 rounded-xl shadow-sm hover:shadow-md border-border">
+  <Card class="transition-all duration-200 rounded-2xl shadow-sm hover:shadow-md border-border">
     <div class="p-5">
       <div class="flex flex-col space-y-2">
         <div class="flex flex-col space-y-1 min-w-0 flex-1">
@@ -160,11 +160,11 @@ const handleOperate = async (operate) => {
                     <i class="icon-[material-symbols--more-vert] h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" class="shadow-sm">
+                <DropdownMenuContent align="end" class="rounded-2xl backdrop-blur-md bg-white/60">
                   <DropdownMenuItem
                     v-for="op in operates"
                     :key="op.operate"
-                    :class="['flex items-center gap-2 cursor-pointer text-muted-foreground', op.class]"
+                    :class="['flex items-center gap-2 cursor-pointer text-muted-foreground rounded-full', op.class]"
                     @click="handleOperate(op.operate)"
                   >
                     <i :class="op.icon + ' h-4 w-4'" />

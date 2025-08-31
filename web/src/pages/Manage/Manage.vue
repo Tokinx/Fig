@@ -1,5 +1,5 @@
 <script setup>
-import { ref, h, watch } from "vue";
+import { ref, h, watch, computed } from "vue";
 import { useRouter } from "vue-router";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
@@ -12,7 +12,7 @@ import { getModeList } from "@/lib/link-config";
 import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
 
 const router = useRouter();
 const originalUrl = location.host;
@@ -69,7 +69,7 @@ watch(searchQuery, (newValue) => {
 });
 
 // 获取模式选项，添加"全部"选项
-const modeOptions = [{ value: "all", label: t('common.all') }, ...getModeList()];
+const modeOptions = computed(() => [{ value: "all", label: t('common.all') }, ...getModeList()]);
 </script>
 
 <template>
@@ -87,6 +87,7 @@ const modeOptions = [{ value: "all", label: t('common.all') }, ...getModeList()]
           <form class="relative flex-1 ml-2 max-w-80" @submit.prevent="handleSearch">
             <Input
               id="search"
+              :key="`search-${locale}`"
               v-model="searchQuery"
               @focus="focusState = true"
               @blur="focusState = false"

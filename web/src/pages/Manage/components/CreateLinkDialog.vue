@@ -9,7 +9,10 @@ import { state, close } from "./use-link-panel";
 import { toast } from "@/components/ui/toast/use-toast";
 import { useI18n } from 'vue-i18n';
 
-const { t } = useI18n();
+const { t, locale } = useI18n();
+
+// 获取模式列表的计算属性，确保响应式
+const modeList = computed(() => getModeList());
 
 const originalUrl = location.host;
 const internalLoading = ref({ randomize: false, create: false });
@@ -139,6 +142,7 @@ watch(
           <div class="relative">
             <Textarea
               id="url"
+              :key="`url-${locale}`"
               :model-value="formData.url"
               @update:model-value="(value) => formData = { ...formData, url: value }"
               :placeholder="t('shortLink.urlPlaceholder')"
@@ -149,7 +153,7 @@ watch(
             <div class="absolute bottom-2 left-2 right-2 flex">
               <div class="flex gap-1 bg-white/60 backdrop-blur rounded-full overflow-auto">
                 <Button
-                  v-for="option in getModeList()"
+                  v-for="option in modeList"
                   :key="option.value"
                   :value="option.value"
                   @click.prevent="switchMode(option.value)"
@@ -180,6 +184,7 @@ watch(
               </div>
               <Input
                 type="text"
+                :key="`slug-${locale}`"
                 :class="['rounded-full shadow-none border-0 !bg-white !pl-2 pr-10', formData.creation && '!opacity-100 text-slate-500']"
                 :model-value="formData.slug"
                 @update:model-value="(value) => formData = { ...formData, slug: value }"
@@ -225,6 +230,7 @@ watch(
               <div class="space-y-2">
                 <Input
                   id="displayName"
+                  :key="`displayName-${locale}`"
                   class="rounded-full"
                   :model-value="formData.displayName"
                   @update:model-value="(value) => formData = { ...formData, displayName: value }"
@@ -236,6 +242,7 @@ watch(
               <div class="space-y-2">
                 <Input
                   id="passcode"
+                  :key="`passcode-${locale}`"
                   class="rounded-full"
                   :model-value="formData.passcode"
                   @update:model-value="(value) => formData = { ...formData, passcode: value }"
@@ -249,6 +256,7 @@ watch(
             <div class="space-y-2">
               <Textarea
                 id="notes"
+                :key="`notes-${locale}`"
                 :model-value="formData.notes"
                 @update:model-value="(value) => formData = { ...formData, notes: value }"
                 :placeholder="t('shortLink.notesPlaceholder')"

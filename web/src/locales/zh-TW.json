@@ -95,7 +95,6 @@
     "filterResults": "正在篩選 {type} 類型，找到 {count} 條結果"
   },
   "footer": {
-    "buildOn": "建構於",
-    "poweredBy": "由 Cloudflare Workers 驅動"
+    "buildOn": "建構於"
   }
 }

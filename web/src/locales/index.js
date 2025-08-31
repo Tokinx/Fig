@@ -51,6 +51,19 @@ export function setLocale(locale) {
     i18n.global.locale.value = locale
     localStorage.setItem('locale', locale)
     document.documentElement.lang = locale
+    
+    // 更新页面标题
+    updatePageTitle()
+  }
+}
+
+// 更新页面标题的工具函数
+export function updatePageTitle() {
+  // 获取当前路由的标题键
+  const router = window.router
+  if (router?.currentRoute?.value?.meta?.titleKey) {
+    const { t } = i18n.global
+    document.title = t(router.currentRoute.value.meta.titleKey)
   }
 }
 

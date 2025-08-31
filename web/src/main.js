@@ -26,7 +26,7 @@ const router = createRouter({
     {
       path: "/:pathMatch(.*)*",
       component: () => import("./pages/404/404.vue"),
-      meta: { titleKey: "pages.notFoundTitle" },
+      // meta: { titleKey: "pages.notFoundTitle" },
     },
   ],
 });

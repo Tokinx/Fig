@@ -219,7 +219,7 @@ export default class ControllerAPI {
 		return this.createSuccessResponse({
 			url: obj.url,
 			mode: obj.mode || 'redirect',
-			notes: obj.notes || ''
+			// notes: obj.notes || ''
 		});
 	}
 }

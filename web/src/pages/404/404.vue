@@ -18,17 +18,16 @@ const originalUrl = location.origin;
 const passcode = ref("");
 const onPasscode = (e) => {
   e.preventDefault();
-  console.log(passcode.value);
-
   fetch("/api/?action=sesame", {
     method: "POST",
+    // content-type header must be set to application/json
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ slug: location?.pathname?.replace(/^\//, ""), passcode: passcode.value }),
   })
     .then((res) => res.json())
     .then(({ data }) => {
       if (data) {
-        // location.href = res.data;
-        console.log(data);
+        if (data?.url) location.href = data?.url;
       } else {
         alert({
           title: "Error",

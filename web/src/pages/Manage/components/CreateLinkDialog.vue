@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { getModeList } from "@/lib/link-config";
 import { state, close } from "./use-link-panel";
 import { toast } from "@/components/ui/toast/use-toast";
-import { useI18n } from 'vue-i18n';
+import { useI18n } from "vue-i18n";
 
 const { t, locale } = useI18n();
 
@@ -49,8 +49,8 @@ const handleRandomize = async () => {
   } catch (error) {
     console.error("Failed to generate slug:", error);
     toast({
-      title: t('messages.generateFailed'),
-      description: t('messages.generateFailedDesc'),
+      title: t("messages.generateFailed"),
+      description: t("messages.generateFailedDesc"),
       variant: "destructive",
       class: "rounded-2xl",
     });
@@ -81,23 +81,25 @@ const handleSubmit = async () => {
 
     if (result.code === 0) {
       toast({
-        title: formData.value.creation ? t('messages.updateSuccess') : t('messages.createSuccess'),
-        description: formData.value.creation ? t('messages.linkUpdated', { slug: formData.value.slug }) : t('messages.linkCreated', { slug: formData.value.slug }),
+        title: formData.value.creation ? t("messages.updateSuccess") : t("messages.createSuccess"),
+        description: formData.value.creation
+          ? t("messages.linkUpdated", { slug: formData.value.slug })
+          : t("messages.linkCreated", { slug: formData.value.slug }),
         class: "rounded-2xl",
       });
       close(true); // 传递 true 表示成功，会触发 resolve
     } else {
       toast({
-        title: formData.value.creation ? t('messages.updateFailed') : t('messages.createFailed'),
-        description: result.msg || t('messages.operationFailed'),
+        title: formData.value.creation ? t("messages.updateFailed") : t("messages.createFailed"),
+        description: result.msg || t("messages.operationFailed"),
         variant: "destructive",
         class: "rounded-2xl",
       });
     }
   } catch (error) {
     toast({
-      title: t('messages.operationFailed'),
-      description: t('messages.networkError'),
+      title: t("messages.operationFailed"),
+      description: t("messages.networkError"),
       variant: "destructive",
       class: "rounded-2xl",
     });
@@ -106,7 +108,6 @@ const handleSubmit = async () => {
     internalLoading.value.create = false;
   }
 };
-
 
 let advancedHeight = ref("");
 let advancedArea = ref(null);
@@ -144,7 +145,7 @@ watch(
               id="url"
               :key="`url-${locale}`"
               :model-value="formData.url"
-              @update:model-value="(value) => formData = { ...formData, url: value }"
+              @update:model-value="(value) => (formData = { ...formData, url: value })"
               :placeholder="t('shortLink.urlPlaceholder')"
               class="resize-none rounded-2xl pb-10"
               :rows="4"
@@ -171,7 +172,7 @@ watch(
               >
                 <i v-if="internalLoading.create" class="icon-[material-symbols--refresh] animate-spin" />
                 <i v-else class="icon-[material-symbols--flash-on] text-sm" />
-                {{ formData.creation ? t('common.update') : t('common.create') }}
+                {{ formData.creation ? t("common.update") : t("common.create") }}
               </Button>
             </div>
           </div>
@@ -185,9 +186,12 @@ watch(
               <Input
                 type="text"
                 :key="`slug-${locale}`"
-                :class="['rounded-full shadow-none border-0 !bg-white !pl-2 pr-10', formData.creation && '!opacity-100 text-slate-500']"
+                :class="[
+                  'rounded-full shadow-none border-0 !bg-white !pl-2 pr-10',
+                  formData.creation && '!opacity-100 text-slate-500',
+                ]"
                 :model-value="formData.slug"
-                @update:model-value="(value) => formData = { ...formData, slug: value }"
+                @update:model-value="(value) => (formData = { ...formData, slug: value })"
                 :placeholder="t('shortLink.slugPlaceholder')"
                 :disabled="formData.creation"
                 required
@@ -201,7 +205,10 @@ watch(
                 :disabled="formData.creation"
                 @click.prevent="handleRandomize"
               >
-                <i v-if="!internalLoading.randomize" class="icon-[material-symbols--autorenew-outline-rounded] text-base" />
+                <i
+                  v-if="!internalLoading.randomize"
+                  class="icon-[material-symbols--autorenew-outline-rounded] text-base"
+                />
                 <i v-else class="icon-[material-symbols--progress-activity] animate-spin text-base" />
               </Button>
             </div>
@@ -210,7 +217,7 @@ watch(
 
             <!-- 高级设置 -->
             <Button variant="text" type="button" class="shrink-0 self-end text-xs rounded-full" @click="switchAdvanced">
-              {{ t('shortLink.advancedSettings') }}
+              {{ t("shortLink.advancedSettings") }}
               <i
                 :class="[
                   'icon-[material-symbols--expand-more] transition-transform text-lg -mr-1',
@@ -233,7 +240,7 @@ watch(
                   :key="`displayName-${locale}`"
                   class="rounded-full"
                   :model-value="formData.displayName"
-                  @update:model-value="(value) => formData = { ...formData, displayName: value }"
+                  @update:model-value="(value) => (formData = { ...formData, displayName: value })"
                   :placeholder="t('shortLink.displayNamePlaceholder')"
                   :disabled="internalLoading.create"
                 />
@@ -245,9 +252,8 @@ watch(
                   :key="`passcode-${locale}`"
                   class="rounded-full"
                   :model-value="formData.passcode"
-                  @update:model-value="(value) => formData = { ...formData, passcode: value }"
+                  @update:model-value="(value) => (formData = { ...formData, passcode: value })"
                   :placeholder="t('shortLink.passcodePlaceholder')"
-                  type="password"
                   :disabled="internalLoading.create"
                 />
               </div>
@@ -258,7 +264,7 @@ watch(
                 id="notes"
                 :key="`notes-${locale}`"
                 :model-value="formData.notes"
-                @update:model-value="(value) => formData = { ...formData, notes: value }"
+                @update:model-value="(value) => (formData = { ...formData, notes: value })"
                 :placeholder="t('shortLink.notesPlaceholder')"
                 class="rounded-2xl resize-none"
                 rows="4"

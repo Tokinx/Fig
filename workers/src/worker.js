@@ -171,7 +171,7 @@ async function handleShortUrl(c, slug, additionalPath = '') {
 
 // Helper function to serve pages
 async function servePage(c, path, status = 200, dynamicScript = '') {
-	let themeUrl = `${c.env.THEME}${(path.includes('@/pages/') ? path : '/index.html').replace(/^\/pages/, '')}`;
+	let themeUrl = `${c.env.THEME}${(path.includes('@/pages/') ? path : '/index.html').replace('@/pages/', '/')}`;
 
 	// Development environment
 	if (c.req.header('host')?.includes('localhost')) {

@@ -29,25 +29,41 @@ ANALYTICS_DATASET            # Analytics数据集名称（默认：fig_url_analy
 
 ### 1. 获取Cloudflare API Token
 
+**⚠️ 重要提醒**：当前的API Token权限不足，需要重新创建！
+
 1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
 2. 转到 `My Profile` > `API Tokens`
 3. 点击 `Create Token`
 4. 选择 `Custom token`
-5. 设置权限（重要！）：
-   - **Account权限**：
-     - `Cloudflare Workers:Edit`
-     - `Account:Read`
-   - **Zone权限**（如果需要）：
-     - `Zone:Zone:Read`
-     - `Zone:Zone Settings:Read`
-   - **User权限**（必需！）：
-     - `User:User Details:Read`
-   - **其他权限**：
-     - `D1:Edit` (如果使用D1数据库)
-     - `Zone Analytics:Read` (如果使用Analytics Engine)
-6. 资源范围设置为 `Include - All accounts` 或选择特定账户
+5. **重要：按以下顺序设置权限**：
+   
+   **Account权限**：
+   - ✅ `Account:Read`
+   - ✅ `Cloudflare Workers:Edit`
+   
+   **User权限**（⚠️ 这是关键！）：
+   - ✅ `User:User Details:Read`
+   
+   **Zone权限**（如果需要域名功能）：
+   - ✅ `Zone:Zone:Read`
+   - ✅ `Zone:Zone Settings:Read`
+   
+   **其他权限**：
+   - ✅ `D1:Edit` (必需，用于数据库操作)
+   - ✅ `Zone Analytics:Read` (可选，用于Analytics Engine)
 
-⚠️ **重要提醒**：`User:User Details:Read` 权限是必需的，缺少此权限会导致认证错误！
+6. **资源范围**：
+   - Account resources: `Include - All accounts` 或选择您的特定账户
+   - Zone resources: `Include - All zones` 或选择特定域名
+
+7. **TTL**: 设置合适的过期时间
+8. 点击 `Continue to summary` 然后 `Create Token`
+9. **立即复制Token值**（只显示一次）
+
+**❌ 常见错误**：
+- 忘记添加 `User:User Details:Read` 权限
+- 只设置了 Account 权限而忘记 User 权限
+- 资源范围设置错误
 
 ### 2. 获取Account ID
 
@@ -66,7 +82,15 @@ ANALYTICS_DATASET            # Analytics数据集名称（默认：fig_url_analy
 1. 点击 `Settings` 标签
 2. 在左侧菜单选择 `Secrets and variables` > `Actions`
 3. 点击 `New repository secret`
-4. 逐个添加上述Secrets
+4. **重要：更新现有的CF_API_TOKEN**：
+   - 如果 `CF_API_TOKEN` 已存在，点击它进行编辑
+   - 将新创建的API Token值粘贴进去
+   - 点击 `Update secret`
+5. 确保以下Secrets都已正确设置：
+   - `CF_API_TOKEN`: 新创建的包含所有必需权限的API Token
+   - `CF_ACCOUNT_ID`: 您的Cloudflare Account ID
+   - `WORKER_PASSWORD`: Workers应用的管理员密码
+   - `D1_DATABASE_ID`: D1数据库的ID
 
 ### 5. 在GitHub中设置Variables
 
@@ -113,17 +137,28 @@ ANALYTICS_DATASET = "fig_url_analytics"
 
 ### 常见问题
 
-1. **Authentication error [code: 10000]**：
-   - 原因：API Token权限不足
-   - 解决方案：确保API Token包含以下权限：
-     - `User:User Details:Read` （必需！）
-     - `Cloudflare Workers:Edit`
-     - `Account:Read`
-   - 创建新的API Token并更新GitHub Secrets中的 `CF_API_TOKEN`
+1. **Authentication error [code: 10000] - 仍然出现**：
+   - **解决方案**：您的API Token仍然缺少权限，请按以下步骤操作：
+     ```bash
+     # 1. 删除现有的API Token
+     # 2. 按照上面的步骤重新创建API Token，确保包含所有权限
+     # 3. 在GitHub Secrets中更新 CF_API_TOKEN
+     # 4. 重新触发部署
+     ```
+   - **验证Token权限**：使用以下命令测试（将YOUR_TOKEN替换为实际Token）：
+     ```bash
+     curl -H "Authorization: Bearer YOUR_TOKEN" \
+          "https://api.cloudflare.com/client/v4/user"
+     ```
+     如果返回用户信息，说明Token有效且包含User权限。
 
-2. **部署失败**：检查API Token权限和Account ID是否正确
-3. **数据库连接失败**：确认D1 Database ID是否正确
-4. **环境变量缺失**：确保所有必需的Secrets都已设置
+2. **"Unable to retrieve email for this user"**：
+   - 这是正常的，Custom Token无法显示邮箱
+   - 只要没有其他错误，部署应该能正常进行
+
+3. **部署失败**：检查API Token权限和Account ID是否正确
+4. **数据库连接失败**：确认D1 Database ID是否正确
+5. **环境变量缺失**：确保所有必需的Secrets都已设置
 
 ### 调试步骤
 

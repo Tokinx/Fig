@@ -32,12 +32,22 @@ ANALYTICS_DATASET            # Analytics数据集名称（默认：fig_url_analy
 1. 登录 [Cloudflare Dashboard](https://dash.cloudflare.com/)
 2. 转到 `My Profile` > `API Tokens`
 3. 点击 `Create Token`
-4. 选择 `Custom token` 或使用 `Global API Key`
-5. 设置权限：
-   - Zone: Zone:Read, Zone:Edit
-   - Account: Cloudflare Workers:Edit
-   - D1: D1:Edit (如果使用D1数据库)
-   - Analytics: Analytics:Read (如果使用Analytics Engine)
+4. 选择 `Custom token`
+5. 设置权限（重要！）：
+   - **Account权限**：
+     - `Cloudflare Workers:Edit`
+     - `Account:Read`
+   - **Zone权限**（如果需要）：
+     - `Zone:Zone:Read`
+     - `Zone:Zone Settings:Read`
+   - **User权限**（必需！）：
+     - `User:User Details:Read`
+   - **其他权限**：
+     - `D1:Edit` (如果使用D1数据库)
+     - `Zone Analytics:Read` (如果使用Analytics Engine)
+6. 资源范围设置为 `Include - All accounts` 或选择特定账户
+
+⚠️ **重要提醒**：`User:User Details:Read` 权限是必需的，缺少此权限会导致认证错误！
 
 ### 2. 获取Account ID
 
@@ -78,9 +88,9 @@ ANALYTICS_DATASET            # Analytics数据集名称（默认：fig_url_analy
 ### Secrets
 ```
 CF_API_TOKEN = "您的新API Token"
-WORKER_PASSWORD = "Fig@1234"  # 或设置新密码
-CF_ACCOUNT_ID = "bc920e7436485b250ead34a515fed181"
-D1_DATABASE_ID = "27125d38-dcf0-429b-afb4-8aa3df4533af"
+WORKER_PASSWORD = "设置密码"
+CF_ACCOUNT_ID = ""
+D1_DATABASE_ID = ""
 ```
 
 ### Variables  
@@ -103,9 +113,17 @@ ANALYTICS_DATASET = "fig_url_analytics"
 
 ### 常见问题
 
-1. **部署失败**：检查API Token权限和Account ID是否正确
-2. **数据库连接失败**：确认D1 Database ID是否正确
-3. **环境变量缺失**：确保所有必需的Secrets都已设置
+1. **Authentication error [code: 10000]**：
+   - 原因：API Token权限不足
+   - 解决方案：确保API Token包含以下权限：
+     - `User:User Details:Read` （必需！）
+     - `Cloudflare Workers:Edit`
+     - `Account:Read`
+   - 创建新的API Token并更新GitHub Secrets中的 `CF_API_TOKEN`
+
+2. **部署失败**：检查API Token权限和Account ID是否正确
+3. **数据库连接失败**：确认D1 Database ID是否正确
+4. **环境变量缺失**：确保所有必需的Secrets都已设置
 
 ### 调试步骤
 

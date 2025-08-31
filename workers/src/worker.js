@@ -143,6 +143,13 @@ async function handleShortUrl(c, slug, additionalPath = '') {
 		return await servePage(c, '/404', 404);
 	}
 
+	// Check if passcode is required
+	if (short.passcode) {
+		// Pass slug and PAGE='passcode' to the 404 page for passcode verification
+		const dynamicScript = `window.__SLUG__ = '${slug}'; window.__PAGE__ = 'passcode';`;
+		return await servePage(c, '/404', 200, dynamicScript);
+	}
+
 	const targetUrl = Utils.buildUrlWithPath(short.url, additionalPath);
 
 	switch (short.mode) {

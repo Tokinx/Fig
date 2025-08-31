@@ -195,6 +195,33 @@ export default class ControllerAPI {
 			null
 		);
 	}
+
+	// validate passcode for protected slug
+	async sesame() {
+		const { request } = this.utils;
+		const { slug, passcode } = await GetReqJson(request);
+		
+		if (!slug) {
+			return this.createErrorResponse(1070, 'Slug is required.');
+		}
+		
+		const obj = await this.utils.ParseFirst(slug);
+		if (!obj.url) {
+			return this.createErrorResponse(1071, 'Slug not found.');
+		}
+		
+		// Check if passcode is required and matches
+		if (obj.passcode && obj.passcode !== passcode) {
+			return this.createErrorResponse(1072, 'Invalid passcode.');
+		}
+		
+		// If no passcode required or passcode matches, return success with URL data
+		return this.createSuccessResponse({
+			url: obj.url,
+			mode: obj.mode || 'redirect',
+			notes: obj.notes || ''
+		});
+	}
 }
 
 // Export Hono API routes as well for potential future use

@@ -40,7 +40,7 @@ const SingIn = async (event) => {
 
     // 登录成功，跳转到首页
     setTimeout(() => {
-      window.location.href = "/home";
+      location.href = "/manage";
     }, 100);
   } catch (error) {
     errMsg.value = "Network error, please try again";

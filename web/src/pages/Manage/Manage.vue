@@ -32,11 +32,6 @@ const handleCreateLink = () => {
     });
 };
 
-// 前往首页
-const goToCreate = () => {
-  router.push("/home");
-};
-
 // 处理搜索
 const handleSearch = () => {
   if (table.value && searchQuery.value.trim() !== lastSearched.value) {
@@ -78,9 +73,9 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
     <div class="border-b border-border">
       <div class="container px-4 h-32 flex flex-col">
         <div class="flex h-16 items-center justify-between">
-          <a href="/home" @click.prevent="goToCreate" class="flex items-center gap-4">
+          <div class="flex items-center gap-4">
             <h1 class="text-xl font-semibold tracking-tight">{{ originalUrl }}</h1>
-          </a>
+          </div>
 
           <!-- 搜索框 -->
           <form class="relative flex-1 ml-2 max-w-80" @submit.prevent="handleSearch">

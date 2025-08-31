@@ -68,18 +68,6 @@ app.get('/', authMiddleware, async (c) => {
 	return await servePage(c, '/');
 });
 
-// Home route (protected) - 创建短链接页面
-app.get('/home', authMiddleware, async (c) => {
-	const isLoggedIn = c.get('isLoggedIn');
-
-	if (!isLoggedIn) {
-		return c.redirect('/');
-	}
-
-	// Serve home page
-	return await servePage(c, '/');
-});
-
 // Manage route (protected) - 管理短链接页面
 app.get('/manage', authMiddleware, async (c) => {
 	const isLoggedIn = c.get('isLoggedIn');

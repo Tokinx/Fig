@@ -190,12 +190,12 @@ watch(
       <div class="flex">
         <!-- 短链接 -->
         <div class="flex w-full max-w-80 relative rounded-full border border-input shadow-sm bg-slate-100">
-          <div class="flex items-center h-9 px-3 text-sm" :class="formData.creation && 'text-slate-500'">
-            {{ originalUrl }}/
+          <div class="flex items-center h-9 px-3 pr-2 text-sm" :class="formData.creation && 'text-slate-500'">
+            {{ originalUrl }}
           </div>
           <Input
             type="text"
-            :class="['rounded-full shadow-none border-0 bg-white', formData.creation && 'bg-slate-100']"
+            :class="['rounded-full shadow-none border-0 !bg-white !pl-2 pr-10', formData.creation && '!opacity-100 text-slate-500']"
             :model-value="formData.slug"
             @update:model-value="(value) => emit('update:modelValue', { ...formData, slug: value })"
             placeholder="短链接"
@@ -207,10 +207,7 @@ watch(
             type="button"
             variant="outline"
             size="icon"
-            :class="[
-              'rounded-full absolute top-1/2 right-2 -translate-y-1/2 w-6 h-6 flex-shrink-0 active:scale-95',
-              formData.creation && 'bg-slate-100',
-            ]"
+            class="rounded-full absolute top-1/2 right-2 -translate-y-1/2 w-6 h-6 flex-shrink-0 active:scale-95"
             :disabled="formData.creation"
             @click.prevent="handleRandomize"
           >

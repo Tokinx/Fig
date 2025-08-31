@@ -121,10 +121,10 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
         <div class="flex-1"></div>
         <!-- 筛选 -->
         <div class="flex items-start gap-1">
-          <div class="flex overflow-auto">
+          <div class="flex overflow-auto -ml-3">
             <div v-for="option in modeOptions" :key="option.value" class="shrink-0">
               <Button
-                variant="ghost"
+                variant="text"
                 size="sm"
                 class="gap-2 h-7 rounded-full shrink-0"
                 @click="handleFilterChange(option.value)"
@@ -143,7 +143,7 @@ const modeOptions = [{ value: "all", label: "全部" }, ...modeList];
           <div class="flex-1"></div>
           <Button @click="handleCreateLink" size="sm" class="gap-1 h-7 rounded-full">
             <i class="icon-[material-symbols--flash-on] text-sm" />
-            <span class="hidden sm:inline">快速创建</span>
+            <span >快速创建</span>
           </Button>
         </div>
       </div>

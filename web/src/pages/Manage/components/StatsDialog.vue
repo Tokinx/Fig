@@ -344,7 +344,7 @@ watch(
 
               <div class="grid gap-3 sm:grid-cols-3">
                 <div class="grid gap-3 sm:grid-rows-2">
-                  <div class="rounded-md border border-slate-200 px-4 py-3">
+                  <div class="rounded-md border px-4 py-3">
                     <div class="text-xs uppercase text-slate-400">{{ t("stats.dailyAverage") }}
                     </div>
                     <div class="mt-2 text-xl font-semibold text-slate-900">
@@ -353,7 +353,7 @@ watch(
                     <div class="text-sm text-slate-500">{{ t("stats.visits") }}</div>
                   </div>
 
-                  <div class="rounded-md border border-slate-200 px-4 py-3">
+                  <div class="rounded-md border px-4 py-3">
                     <div class="text-xs uppercase text-slate-400">{{ t("stats.peakDay") }}</div>
                     <div class="mt-2 text-xl font-semibold text-slate-900">
                       {{ peakDay ? peakDay.label : t("stats.peakDayEmpty") }}
@@ -365,21 +365,18 @@ watch(
                   </div>
                 </div>
 
-                <div v-if="stats?.summary?.last90d" class="px-4 py-5 sm:px-5">
-                  <div class="rounded-md border border-slate-200 px-4 py-4">
-                    <div class="flex h-52 items-end gap-[2px]">
-                      <div v-for="point in timelineSeries" :key="point.key" class="group flex h-full flex-1 items-end"
-                        :title="`${point.label}: ${formatter.format(point.visits)} ${t('stats.visits')}`">
-                        <div
-                          class="w-full rounded-t-full bg-[linear-gradient(180deg,#0f172a,#334155)] transition-opacity group-hover:opacity-80"
-                          :style="{ height: `${point.height}%` }" />
-                      </div>
+                <div v-if="stats?.summary?.last90d" class="rounded-md border px-4 py-3 sm:col-span-2">
+                  <div class="flex h-52 items-end gap-[1px]">
+                    <div v-for="point in timelineSeries" :key="point.key" class="group flex h-full flex-1 items-end"
+                      :title="`${point.label}: ${formatter.format(point.visits)} ${t('stats.visits')}`">
+                      <div class="w-full bg-black transition-opacity group-hover:opacity-50"
+                        :style="{ height: `${point.height}%` }" />
                     </div>
-                    <div class="mt-3 flex justify-between text-[11px] text-slate-400">
-                      <span>{{ timelineSeries[0]?.label }}</span>
-                      <span>{{ timelineSeries[Math.floor(timelineSeries.length / 2)]?.label }}</span>
-                      <span>{{ timelineSeries[timelineSeries.length - 1]?.label }}</span>
-                    </div>
+                  </div>
+                  <div class="mt-3 flex justify-between text-[11px] text-slate-400">
+                    <span>{{ timelineSeries[0]?.label }}</span>
+                    <span>{{ timelineSeries[Math.floor(timelineSeries.length / 2)]?.label }}</span>
+                    <span>{{ timelineSeries[timelineSeries.length - 1]?.label }}</span>
                   </div>
                 </div>
                 <div v-else
@@ -405,86 +402,26 @@ watch(
               </div>
 
               <div v-if="section.items.length" class="space-y-4 px-4 py-4 sm:px-5">
-                <div class="overflow-hidden rounded-[24px] border px-4 py-4 shadow-sm"
-                  :class="section.heroSurfaceClass">
-                  <div class="flex items-start justify-between gap-4">
-                    <div class="min-w-0">
-                      <div class="text-[11px] uppercase tracking-[0.18em] text-slate-500">{{ section.subtitle }}</div>
-                      <div class="mt-3 flex items-center gap-3">
-                        <span
-                          class="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/80 text-xs font-semibold tracking-[0.12em] text-slate-700 shadow-sm">
-                          {{ getBreakdownBadge(section.key, section.items[0]?.label) }}
-                        </span>
-                        <div class="min-w-0">
-                          <div class="truncate text-lg font-semibold text-slate-900">
-                            {{ getBreakdownLabel(section.key, section.items[0]?.label) }}
-                          </div>
-                          <div class="text-sm text-slate-500">
-                            {{ formatShare(getBreakdownShare(section.items, section.items[0]?.visits), true) }} {{
-                              t("stats.share") }}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="shrink-0 text-right">
-                      <div class="text-3xl font-semibold tracking-tight text-slate-900">
-                        {{ compactFormatter.format(section.items[0]?.visits || 0) }}
-                      </div>
-                      <div class="text-xs text-slate-500">{{ t("stats.visits") }}</div>
-                    </div>
-                  </div>
-
-                  <div class="mt-4 h-2 overflow-hidden rounded-full bg-white/80">
-                    <div class="h-full rounded-full" :class="section.meterClass"
-                      :style="{ width: getBreakdownWidth(section.items, section.items[0]?.visits) }" />
-                  </div>
-
-                  <div class="mt-4 flex flex-wrap gap-2 text-xs text-slate-600">
-                    <span class="rounded-full bg-white/80 px-3 py-1">
-                      {{ t("stats.topCaptured", {
-                        count: section.items.length, share:
-                          formatShare(getBreakdownCoverage(section.items), true)
-                      }) }}
-                    </span>
-                  </div>
-                </div>
-
                 <div class="space-y-3">
                   <div v-for="(entry, index) in section.items" :key="`${section.key}-${entry.label}`"
-                    class="rounded-[22px] border border-slate-200 bg-slate-50/70 px-4 py-3 transition-colors hover:border-slate-300 hover:bg-white">
-                    <div class="flex items-start gap-3">
-                      <span
-                        class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-xs font-semibold text-slate-500 shadow-sm">
-                        {{ index + 1 }}
-                      </span>
+                    class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <span class="truncate text-sm font-medium text-slate-900">
+                          {{ getBreakdownLabel(section.key, entry.label) }}
+                        </span>
 
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-start justify-between gap-3">
-                          <div class="min-w-0">
-                            <div class="flex items-center gap-2">
-                              <span
-                                class="flex h-8 w-8 items-center justify-center rounded-xl bg-white text-[11px] font-semibold tracking-[0.1em] text-slate-600 shadow-sm">
-                                {{ getBreakdownBadge(section.key, entry.label) }}
-                              </span>
-                              <span class="truncate text-sm font-medium text-slate-900">
-                                {{ getBreakdownLabel(section.key, entry.label) }}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div class="shrink-0 text-right">
-                            <div class="text-sm font-semibold text-slate-900">{{ formatter.format(entry.visits) }}
-                            </div>
-                            <div class="text-[11px] text-slate-400">
-                              {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
-                            </div>
-                          </div>
-                        </div>
-
-                        <div class="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                          <div class="h-full rounded-full" :class="section.meterClass"
+                        <div class="h-2 overflow-hidden bg-white">
+                          <div class="h-full" :class="section.meterClass"
                             :style="{ width: getBreakdownWidth(section.items, entry.visits) }" />
+                        </div>
+                      </div>
+
+                      <div class="shrink-0 text-right">
+                        <div class="text-sm font-semibold text-slate-900">{{ formatter.format(entry.visits) }}
+                        </div>
+                        <div class="text-[11px] text-slate-400">
+                          {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
                         </div>
                       </div>
                     </div>
@@ -508,47 +445,27 @@ watch(
               </div>
 
               <div v-if="deviceSection.items.length" class="space-y-4 px-4 py-4 sm:px-5">
-                <div
-                  class="rounded-[24px] border border-slate-200 bg-[linear-gradient(145deg,rgba(255,255,255,0.98),rgba(248,250,252,0.88))] px-4 py-4">
-                  <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">{{ t("stats.devices") }}</div>
-                  <div class="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
-                    {{ formatter.format(getBreakdownTotal(deviceSection.items)) }}
-                  </div>
-                  <div class="mt-2 text-xs text-slate-500">
-                    {{ t("stats.topCaptured", {
-                      count: deviceSection.items.length, share:
-                        formatShare(getBreakdownCoverage(deviceSection.items), true)
-                    }) }}
-                  </div>
-                </div>
-
                 <div class="space-y-3">
-                  <div v-for="entry in deviceSection.items" :key="`devices-${entry.label}`"
-                    class="rounded-[22px] border border-slate-200 bg-slate-50/70 px-4 py-3">
-                    <div class="flex items-center gap-3">
-                      <span
-                        class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white text-[11px] font-semibold tracking-[0.12em] text-slate-700 shadow-sm">
-                        {{ getDeviceBadge(entry.label) }}
-                      </span>
+                  <div v-for="entry in deviceSection.items" :key="`devices-${entry.label}`" class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <span class="truncate text-sm font-medium text-slate-900">
+                          {{ getBreakdownLabel(deviceSection.key, entry.label) }}
+                        </span>
 
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-center justify-between gap-3">
-                          <span class="truncate text-sm font-medium text-slate-900">
-                            {{ getBreakdownLabel(deviceSection.key, entry.label) }}
-                          </span>
-                          <span class="text-sm font-semibold text-slate-900">
-                            {{ formatter.format(entry.visits) }}
-                          </span>
-                        </div>
-
-                        <div class="mt-2 flex items-center justify-between gap-3 text-[11px] text-slate-400">
-                          <span>{{ formatShare(getBreakdownShare(deviceSection.items, entry.visits), true) }}</span>
-                          <span>{{ t("stats.share") }}</span>
-                        </div>
-
-                        <div class="mt-2 h-2 overflow-hidden rounded-full bg-white">
-                          <div class="h-full rounded-full bg-[linear-gradient(90deg,#0f172a,#475569)]"
+                        <div class="h-2 overflow-hidden bg-white">
+                          <div class="h-full bg-slate-600"
                             :style="{ width: getBreakdownWidth(deviceSection.items, entry.visits) }" />
+                        </div>
+                      </div>
+
+                      <div class="shrink-0 text-right">
+                        <div class="text-sm font-semibold text-slate-900">
+                          {{ formatter.format(entry.visits) }}
+                        </div>
+                        <div class="text-[11px] text-slate-400">
+                          {{ t("stats.share") }} {{ formatShare(getBreakdownShare(deviceSection.items, entry.visits),
+                            true) }}
                         </div>
                       </div>
                     </div>

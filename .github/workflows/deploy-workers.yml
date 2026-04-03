@@ -66,6 +66,7 @@ jobs:
           ${{ vars.SLUG_LENGTH && format('SLUG_LENGTH = {0}', vars.SLUG_LENGTH) || '# SLUG_LENGTH 未设置，使用默认值' }}
           CF_API_TOKEN = "${{ secrets.CF_API_TOKEN }}"
           CF_ACCOUNT_ID = "${{ secrets.CF_ACCOUNT_ID }}"
+          ANALYTICS_DATASET = "${{ vars.ANALYTICS_DATASET || 'fig_url_analytics' }}"
 
           [[d1_databases]]
           binding = "SQLITE"

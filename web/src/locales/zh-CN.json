@@ -37,6 +37,10 @@
   },
   "shortLink": {
     "title": "短链接",
+    "createTitle": "创建短链接",
+    "editTitle": "编辑短链接",
+    "createDescription": "填写目标地址并配置短链接行为。",
+    "editDescription": "更新当前短链接的目标地址和展示信息。",
     "url": "目标链接",
     "slug": "短链接标识",
     "displayName": "显示名称",

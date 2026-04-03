@@ -37,6 +37,10 @@
   },
   "shortLink": {
     "title": "短網址",
+    "createTitle": "建立短網址",
+    "editTitle": "編輯短網址",
+    "createDescription": "填寫目標連結並設定短網址的行為。",
+    "editDescription": "更新目前短網址的目標連結與顯示資訊。",
     "url": "目標連結",
     "slug": "短網址標識",
     "displayName": "顯示名稱",

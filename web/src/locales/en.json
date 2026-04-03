@@ -37,6 +37,10 @@
   },
   "shortLink": {
     "title": "Short Link",
+    "createTitle": "Create Short Link",
+    "editTitle": "Edit Short Link",
+    "createDescription": "Set the target URL and configure how this short link behaves.",
+    "editDescription": "Update the target URL and presentation details for this short link.",
     "url": "URL",
     "slug": "Slug",
     "displayName": "Display Name",

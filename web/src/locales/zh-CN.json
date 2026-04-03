@@ -82,8 +82,9 @@
   },
   "table": {
     "searching": "搜索中...",
+    "loadMore": "加载更多",
     "loadingMore": "正在加载更多...",
-    "scrollToLoadMore": "向下滚动加载更多",
+    "scrollToLoadMore": "向下滚动或点击加载更多",
     "allRecordsShown": "已显示全部 {count} 条记录",
     "noResults": "没有找到匹配的结果",
     "noData": "还没有短链接",

@@ -82,8 +82,9 @@
   },
   "table": {
     "searching": "Searching...",
+    "loadMore": "Load More",
     "loadingMore": "Loading more...",
-    "scrollToLoadMore": "Scroll down to load more",
+    "scrollToLoadMore": "Scroll down or click to load more",
     "allRecordsShown": "All {count} records shown",
     "noResults": "No matching results found",
     "noData": "No short links yet",

@@ -1,7 +1,5 @@
 import { createI18n } from 'vue-i18n'
-import en from './en.json'
-import zhCN from './zh-CN.json'
-import zhTW from './zh-TW.json'
+import messages from '@intlify/unplugin-vue-i18n/messages'
 
 // 支持的语言列表
 export const supportedLocales = [
@@ -37,11 +35,7 @@ export const i18n = createI18n({
   legacy: false, // 使用Composition API
   locale: getDefaultLocale(),
   fallbackLocale: 'en',
-  messages: {
-    en,
-    'zh-CN': zhCN,
-    'zh-TW': zhTW
-  },
+  messages,
   globalInjection: true
 })
 

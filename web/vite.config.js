@@ -11,10 +11,15 @@ const base = {
 };
 
 export default defineConfig({
+  server: {
+    host: "0.0.0.0", // 监听所有地址
+    port: 5173,
+    strictPort: true,
+  },
   plugins: [
     vue(),
     VueI18nPlugin({
-      include: path.resolve(__dirname, './src/locales/**/*.json'),
+      include: path.resolve(__dirname, "./src/locales/**/*.json"),
       runtimeOnly: false,
     }),
   ],

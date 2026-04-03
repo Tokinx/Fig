@@ -82,8 +82,9 @@
   },
   "table": {
     "searching": "搜尋中...",
+    "loadMore": "載入更多",
     "loadingMore": "正在載入更多...",
-    "scrollToLoadMore": "向下捲動載入更多",
+    "scrollToLoadMore": "向下捲動或點擊載入更多",
     "allRecordsShown": "已顯示全部 {count} 條記錄",
     "noResults": "沒有找到符合的結果",
     "noData": "還沒有短網址",

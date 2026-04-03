@@ -22,112 +22,153 @@ const pagination = ref({ count: 0, page: 1, rows: 10 });
 const currentSearch = ref('');
 const currentFilter = ref('all');
 const hasMore = ref(true);
+let activeRequestId = 0;
 
-const refresh = async (searchQuery = '', filterMode = 'all') => {
-  const oid = Math.random().toString(36).substring(2);
-  loading.value = true;
-  
-  // 重置数据
-  pagination.value.page = 1;
-  tableData.value = [];
-  hasMore.value = true;
-
+const buildRequestBody = (page, searchQuery = currentSearch.value, filterMode = currentFilter.value) => {
   const requestBody = {
     rows: pagination.value.rows,
-    page: pagination.value.page,
+    page,
   };
 
-  // 如果有搜索关键词，添加到请求中
   if (searchQuery) {
     requestBody.search = searchQuery;
   }
 
-  // 如果有筛选模式，添加到请求中
   if (filterMode && filterMode !== 'all') {
     requestBody.mode = filterMode;
   }
 
-  fetch(`/api/?action=get`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(requestBody),
-  })
-    .then((res) => res.json())
-    .then(({ data }) => {
-      const { count, results } = data || {};
-      pagination.value.count = count;
-      const newItems = (results || []).map((x) => {
-        let value = {};
-        try {
-          value = JSON.parse(x.value);
-        } catch (e) {
-          console.log(e);
-        }
-        // 不再获取点击统计，节省请求资源
-        return { ...x, ...value, oid: oid + x.key };
-      });
-      
-      tableData.value = newItems;
-      
-      hasMore.value = newItems.length === pagination.value.rows && tableData.value.length < count;
-    })
-    .finally(() => {
-      loading.value = false;
-    });
+  return requestBody;
 };
 
-const loadMore = async () => {
-  if (loadingMore.value || !hasMore.value) return;
-  
-  loadingMore.value = true;
-  pagination.value.page += 1;
-  
-  const requestBody = {
-    rows: pagination.value.rows,
-    page: pagination.value.page,
-  };
+const mapResults = (results = [], oidPrefix = Math.random().toString(36).substring(2)) => {
+  return results.map((x) => {
+    let value = {};
+    try {
+      value = JSON.parse(x.value);
+    } catch (e) {
+      console.log(e);
+    }
 
-  // 如果有搜索关键词，添加到请求中
-  if (currentSearch.value) {
-    requestBody.search = currentSearch.value;
-  }
+    return { ...x, ...value, oid: oidPrefix + x.key };
+  });
+};
 
-  // 如果有筛选模式，添加到请求中
-  if (currentFilter.value && currentFilter.value !== 'all') {
-    requestBody.mode = currentFilter.value;
-  }
+const updateHasMore = (latestSize, totalCount = pagination.value.count) => {
+  hasMore.value = latestSize === pagination.value.rows && tableData.value.length < totalCount;
+};
 
-  fetch(`/api/?action=get`, {
+const fetchPage = async (page, searchQuery = currentSearch.value, filterMode = currentFilter.value) => {
+  const response = await fetch(`/api/?action=get`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(requestBody),
-  })
-    .then((res) => res.json())
-    .then(({ data }) => {
-      const { results } = data || {};
-      const oid = Math.random().toString(36).substring(2);
-      const newItems = (results || []).map((x) => {
-        let value = {};
-        try {
-          value = JSON.parse(x.value);
-        } catch (e) {
-          console.log(e);
-        }
-        // 不再获取点击统计，节省请求资源
-        return { ...x, ...value, oid: oid + x.key };
-      });
-      
-      if (newItems.length > 0) {
-        tableData.value.push(...newItems);
-        
-        hasMore.value = newItems.length === pagination.value.rows && tableData.value.length < pagination.value.count;
-      } else {
-        hasMore.value = false;
-      }
-    })
-    .finally(() => {
-      loadingMore.value = false;
-    });
+    body: JSON.stringify(buildRequestBody(page, searchQuery, filterMode)),
+  });
+
+  const result = await response.json();
+  if (!response.ok || result.code !== 0) {
+    throw new Error(result.msg || "Failed to fetch links");
+  }
+
+  const { count = 0, results = [] } = result.data || {};
+  return {
+    count,
+    items: mapResults(results),
+  };
+};
+
+const hasVerticalScrollbar = () => {
+  const doc = document.documentElement;
+  const body = document.body;
+  const scrollHeight = Math.max(doc.scrollHeight, body?.scrollHeight || 0);
+  const clientHeight = window.innerHeight || doc.clientHeight;
+  return scrollHeight > clientHeight + 1;
+};
+
+const ensureScrollable = async (requestId = activeRequestId) => {
+  await nextTick();
+
+  while (requestId === activeRequestId && hasMore.value && !loading.value && !loadingMore.value && !hasVerticalScrollbar()) {
+    const loaded = await loadMore({ requestId, skipEnsureScrollable: true });
+    if (!loaded) {
+      break;
+    }
+
+    await nextTick();
+  }
+};
+
+const refresh = async (searchQuery = '', filterMode = 'all') => {
+  const requestId = ++activeRequestId;
+  loading.value = true;
+  
+  // 重置数据
+  pagination.value.page = 1;
+  pagination.value.count = 0;
+  tableData.value = [];
+  hasMore.value = true;
+  
+  try {
+    const { count, items } = await fetchPage(1, searchQuery, filterMode);
+    if (requestId !== activeRequestId) {
+      return;
+    }
+
+    pagination.value.count = count;
+    tableData.value = items;
+    updateHasMore(items.length, count);
+  } catch (error) {
+    if (requestId === activeRequestId) {
+      hasMore.value = false;
+      console.error("Failed to refresh links:", error);
+    }
+  } finally {
+    if (requestId === activeRequestId) {
+      loading.value = false;
+    }
+  }
+
+  if (requestId === activeRequestId) {
+    await ensureScrollable(requestId);
+  }
+};
+
+const loadMore = async ({ requestId = activeRequestId, skipEnsureScrollable = false } = {}) => {
+  if (loading.value || loadingMore.value || !hasMore.value) return false;
+  
+  loadingMore.value = true;
+  let loaded = false;
+  const nextPage = pagination.value.page + 1;
+
+  try {
+    const { count, items } = await fetchPage(nextPage);
+    if (requestId !== activeRequestId) {
+      return false;
+    }
+
+    pagination.value.count = count;
+
+    if (items.length > 0) {
+      tableData.value.push(...items);
+      pagination.value.page = nextPage;
+      updateHasMore(items.length, count);
+      loaded = true;
+    } else {
+      hasMore.value = false;
+    }
+  } catch (error) {
+    if (requestId === activeRequestId) {
+      console.error("Failed to load more links:", error);
+    }
+  } finally {
+    loadingMore.value = false;
+  }
+
+  if (loaded && !skipEnsureScrollable && requestId === activeRequestId) {
+    await ensureScrollable(requestId);
+  }
+
+  return loaded;
 };
 
 // 搜索方法
@@ -150,9 +191,20 @@ const getModeLabel = computed(() => (mode) => {
   return modeOption ? modeOption.label : mode;
 });
 
+const getScrollMetrics = () => {
+  const doc = document.documentElement;
+  const body = document.body;
+
+  return {
+    scrollTop: window.scrollY || doc.scrollTop || body?.scrollTop || 0,
+    scrollHeight: Math.max(doc.scrollHeight, body?.scrollHeight || 0),
+    clientHeight: window.innerHeight || doc.clientHeight,
+  };
+};
+
 // 滚动事件处理
 const handleScroll = () => {
-  const { scrollTop, scrollHeight, clientHeight } = document.documentElement;
+  const { scrollTop, scrollHeight, clientHeight } = getScrollMetrics();
   // 当滚动到底部附近时(距离底部200px内)触发加载
   if (scrollTop + clientHeight >= scrollHeight - 200 && hasMore.value && !loadingMore.value && !loading.value) {
     loadMore();
@@ -235,9 +287,11 @@ defineExpose({ refresh, search, filter });
         <i class="icon-[material-symbols--check-circle] h-4 w-4 mr-1" />
         {{ t('table.allRecordsShown', { count: tableData.length }) }}
       </div>
-      <div v-else class="py-4 text-muted-foreground text-sm flex items-center justify-center">
-        <i class="icon-[material-symbols--keyboard-arrow-down] h-4 w-4 mr-1" />
-        {{ t('table.scrollToLoadMore') }}
+      <div v-else class="py-4 flex items-center justify-center">
+        <Button type="button" variant="ghost" class="rounded-full gap-1 text-muted-foreground text-sm" @click="loadMore">
+          <i class="icon-[material-symbols--keyboard-arrow-down] h-4 w-4" />
+          {{ t('table.scrollToLoadMore') }}
+        </Button>
       </div>
     </div>
 

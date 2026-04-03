@@ -16,6 +16,7 @@ import {
 import { toast } from "@/components/ui/toast/use-toast";
 import { openLinkPanel } from "./use-link-panel";
 import QRCodeDialog from "./QRCodeDialog.vue";
+import { useI18n } from "vue-i18n";
 
 const emit = defineEmits(["refresh"]);
 const props = defineProps({
@@ -25,8 +26,15 @@ const props = defineProps({
   },
 });
 const item = ref(props.item);
+const { t } = useI18n();
 
 const fullLink = `${location.protocol}//${location.host}/${item.value.slug}`;
+
+const getModeLabel = (mode) => {
+  const key = `modes.${mode}`;
+  const label = t(key);
+  return label === key ? mode : label;
+};
 
 const _copied = ref(null);
 const onClipboard = async () => {
@@ -181,10 +189,10 @@ const handleOperate = async (operate) => {
 
         <div class="flex items-center text-xs text-muted-foreground space-x-1">
           <span class="capitalize bg-secondary px-2 h-5 rounded-sm text-xs font-medium flex items-center">
-            {{ item.mode }}
+            {{ getModeLabel(item.mode) }}
           </span>
           <template v-if="item.displayName">
-            <span class="capitalize bg-secondary px-2 h-5 rounded-sm text-xs font-medium flex items-center">
+            <span class=" bg-secondary px-2 h-5 rounded-sm text-xs font-medium flex items-center">
               {{ item.slug }}
             </span>
           </template>

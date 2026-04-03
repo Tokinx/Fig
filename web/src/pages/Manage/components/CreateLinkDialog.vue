@@ -138,7 +138,7 @@ watch(
     <DialogContent class="w-[96%] max-w-2xl max-h-[90vh] overflow-y-auto shadow-lg !rounded-2xl bg-white/60">
       <DialogHeader class="flex-row relative items-center">
         <DialogTitle>{{ formData.creation ? t("shortLink.editTitle") : t("shortLink.createTitle") }}</DialogTitle>
-        <Button class="w-5 h-5 p-0 !my-0 ml-auto" variant="ghost" size="icon" @click="close(false)">
+        <Button class="w-6 h-6 p-0 !my-0 ml-auto" variant="ghost" size="icon" @click="close(false)">
           <i class="icon-[material-symbols--close] h-4 w-4" />
         </Button>
       </DialogHeader>

@@ -11,7 +11,6 @@ export const BaseData = {
   notes: "", // 备注
   mode: "redirect", // 跳转模式
   passcode: "", // 访问密码
-  clicks: 0, // 点击次数
 };
 
 // 获取国际化的模式列表

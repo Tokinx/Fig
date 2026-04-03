@@ -1,6 +1,5 @@
 <script setup>
-import { ref } from "vue";
-import { format } from "date-fns";
+import { computed, ref } from "vue";
 import { copyText } from "vue3-clipboard";
 import { alert } from "@/components/Alert/use-alert";
 import { Button } from "@/components/ui/button";
@@ -9,13 +8,12 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/toast/use-toast";
 import { openLinkPanel } from "./use-link-panel";
 import QRCodeDialog from "./QRCodeDialog.vue";
+import StatsDialog from "./StatsDialog.vue";
 import { useI18n } from "vue-i18n";
 
 const emit = defineEmits(["refresh"]);
@@ -48,13 +46,18 @@ const onClipboard = async () => {
 
 // QR码对话框状态
 const qrCodeVisible = ref(false);
-// 统计对话框状态已移除
+const statsVisible = ref(false);
 
-const operates = [
+const operates = computed(() => [
   {
     name: "Edit",
     icon: "icon-[material-symbols--edit-document-outline]",
     operate: "edit",
+  },
+  {
+    name: t("stats.analytics"),
+    icon: "icon-[material-symbols--monitoring]",
+    operate: "analytics",
   },
   {
     name: "QR Code",
@@ -72,7 +75,7 @@ const operates = [
     operate: "delete",
     class: "!text-destructive hover:!bg-destructive hover:!text-destructive-foreground",
   },
-];
+]);
 
 const emitRefresh = () => {
   emit("refresh");
@@ -103,6 +106,9 @@ const handleOperate = async (operate) => {
       break;
     case "qr-code":
       qrCodeVisible.value = true;
+      break;
+    case "analytics":
+      statsVisible.value = true;
       break;
     case "delete":
       fetch(`/api/?action=delete`, {
@@ -202,5 +208,6 @@ const handleOperate = async (operate) => {
 
     <!-- QR码分享对话框 -->
     <QRCodeDialog v-model:visible="qrCodeVisible" :short-url="fullLink" />
+    <StatsDialog v-model:visible="statsVisible" :item="item" />
   </Card>
 </template>

@@ -52,8 +52,7 @@
     "passcodePlaceholder": "存取密碼",
     "notesPlaceholder": "為這個短網址新增一些備註資訊...",
     "searchPlaceholder": "搜尋短網址...",
-    "advancedSettings": "進階設定",
-    "clicks": "點擊次數"
+    "advancedSettings": "進階設定"
   },
   "modes": {
     "redirect": "跳轉",
@@ -98,6 +97,41 @@
     "searchInType": "搜尋 \"{query}\" 在 {type} 類型中，找到 {count} 條結果",
     "searchResults": "正在搜尋 \"{query}\"，找到 {count} 條結果",
     "filterResults": "正在篩選 {type} 類型，找到 {count} 條結果"
+  },
+  "stats": {
+    "analytics": "存取統計",
+    "description": "查看這個短網址近 90 天內的存取分析資料。",
+    "last24h": "最近 24 小時",
+    "last7d": "最近 7 天",
+    "last30d": "最近 30 天",
+    "last90d": "最近 90 天",
+    "visits": "存取",
+    "trend90d": "90 天存取趨勢",
+    "dailyAverage": "日均存取",
+    "peakDay": "峰值日期",
+    "peakDayEmpty": "暫無峰值",
+    "rankedByVisits": "按近 90 天存取量排序",
+    "timelineEmpty": "最近 90 天內暫無存取紀錄。",
+    "countries": "存取國家/地區",
+    "geoReach": "地區分布",
+    "referrers": "來源網域",
+    "sourceHealth": "來源分布",
+    "devices": "裝置類型",
+    "deviceMix": "裝置構成",
+    "direct": "直接存取",
+    "unknown": "未知",
+    "share": "占比",
+    "topCaptured": "前 {count} 項覆蓋 {share} 存取",
+    "deviceLabels": {
+      "desktop": "桌面端",
+      "mobile": "行動端",
+      "tablet": "平板",
+      "bot": "機器人"
+    },
+    "loading": "正在載入存取統計...",
+    "unavailable": "目前環境尚未啟用 Analytics Engine 查詢。",
+    "failed": "載入存取統計失敗。",
+    "noBreakdown": "暫無可顯示的資料"
   },
   "footer": {
     "buildOn": "建構於"

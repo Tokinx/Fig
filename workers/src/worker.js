@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import Utils from './utils.js';
 import ControllerAPI from './api.js';
+import AnalyticsService from './analytics.js';
 
 const app = new Hono();
 
@@ -11,9 +12,11 @@ app.use('*', cors());
 // Add utils and api to context
 app.use('*', async (c, next) => {
 	const utils = new Utils(c.req.raw, c.env);
-	const api = new ControllerAPI(utils);
+	const analytics = new AnalyticsService(c.req.raw, c.env);
+	const api = new ControllerAPI(utils, analytics);
 	c.set('utils', utils);
 	c.set('api', api);
+	c.set('analytics', analytics);
 	await next();
 });
 
@@ -137,6 +140,7 @@ async function handleProxyRequest(c, targetUrl, slug = null) {
 // Helper function to handle short URL requests
 async function handleShortUrl(c, slug, additionalPath = '') {
 	const utils = c.get('utils');
+	const analytics = c.get('analytics');
 	const short = await utils.ParseFirst(slug);
 
 	if (!short.url) {
@@ -151,8 +155,13 @@ async function handleShortUrl(c, slug, additionalPath = '') {
 	}
 
 	const targetUrl = Utils.buildUrlWithPath(short.url, additionalPath);
+	const mode = short.mode || 'redirect';
 
-	switch (short.mode) {
+	if (!additionalPath) {
+		analytics?.writeVisit({ slug, mode });
+	}
+
+	switch (mode) {
 		case 'redirect':
 			return c.redirect(targetUrl, 302);
 

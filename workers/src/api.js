@@ -20,9 +20,11 @@ async function GetReqJson(request) {
 
 export default class ControllerAPI {
 	utils = {};
+	analytics = null;
 
-	constructor(utils) {
+	constructor(utils, analytics = null) {
 		this.utils = utils;
+		this.analytics = analytics;
 	}
 
 	// Response helper functions
@@ -175,12 +177,41 @@ export default class ControllerAPI {
 			filteredCount = filteredResults.length;
 		}
 		
-		// 直接返回数据库中的结果，点击数已经通过Counter函数保持最新
+		// 返回数据库中的短链列表
 		return this.createResponse(
 			success ? 0 : 1052,
 			'Success',
 			{ results: filteredResults, count: filteredCount, rows, page }
 		);
+	}
+
+	async stats() {
+		const { request } = this.utils;
+		const { slug } = await GetReqJson(request);
+
+		if (!slug) {
+			return this.createErrorResponse(1080, 'Slug is required.');
+		}
+
+		const obj = await this.utils.ParseFirst(slug);
+		if (!obj.url) {
+			return this.createErrorResponse(1081, 'Slug not found.', 404);
+		}
+
+		try {
+			const data = await this.analytics?.getStats(slug);
+			return this.createSuccessResponse(data || {
+				enabled: false,
+				summary: { last24h: 0, last7d: 0, last30d: 0, last90d: 0 },
+				timeline: [],
+				countries: [],
+				referrers: [],
+				devices: [],
+			});
+		} catch (error) {
+			console.error('Failed to query analytics stats:', error);
+			return this.createErrorResponse(1082, 'Failed to load analytics stats.', 500);
+		}
 	}
 
 	// delete a slug
@@ -214,6 +245,8 @@ export default class ControllerAPI {
 		if (obj.passcode && obj.passcode !== passcode) {
 			return this.createErrorResponse(1072, 'Invalid passcode.');
 		}
+
+		this.analytics?.writeVisit({ slug, mode: obj.mode || 'redirect' });
 		
 		// If no passcode required or passcode matches, return success with URL data
 		return this.createSuccessResponse({

@@ -52,8 +52,7 @@
     "passcodePlaceholder": "Access password",
     "notesPlaceholder": "Add some notes for this short link...",
     "searchPlaceholder": "Search short links...",
-    "advancedSettings": "Advanced Settings",
-    "clicks": "Clicks"
+    "advancedSettings": "Advanced Settings"
   },
   "modes": {
     "redirect": "Redirect",
@@ -98,6 +97,41 @@
     "searchInType": "Search \"{query}\" in {type} type, found {count} results",
     "searchResults": "Searching \"{query}\", found {count} results",
     "filterResults": "Filtering {type} type, found {count} results"
+  },
+  "stats": {
+    "analytics": "Analytics",
+    "description": "View visit analytics for this short link over the last 90 days.",
+    "last24h": "Last 24 hours",
+    "last7d": "Last 7 days",
+    "last30d": "Last 30 days",
+    "last90d": "Last 90 days",
+    "visits": "Visits",
+    "trend90d": "90-day Trend",
+    "dailyAverage": "Daily Avg",
+    "peakDay": "Peak Day",
+    "peakDayEmpty": "No peak yet",
+    "rankedByVisits": "Ranked by visits over the last 90 days",
+    "timelineEmpty": "No visits were recorded in the last 90 days.",
+    "countries": "Top Countries",
+    "geoReach": "Geographic reach",
+    "referrers": "Top Referrers",
+    "sourceHealth": "Source distribution",
+    "devices": "Devices",
+    "deviceMix": "Device mix",
+    "direct": "Direct",
+    "unknown": "Unknown",
+    "share": "Share",
+    "topCaptured": "Top {count} captured {share} of visits",
+    "deviceLabels": {
+      "desktop": "Desktop",
+      "mobile": "Mobile",
+      "tablet": "Tablet",
+      "bot": "Bot"
+    },
+    "loading": "Loading analytics...",
+    "unavailable": "Analytics Engine querying is not enabled in the current environment.",
+    "failed": "Failed to load analytics data.",
+    "noBreakdown": "No data to display yet"
   },
   "footer": {
     "buildOn": "Build on"

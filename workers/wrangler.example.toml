@@ -20,6 +20,7 @@ mode = "smart"
 PASSWORD = "dev-password-change-me"    # 本地开发密码，生产环境通过WORKER_PASSWORD Secret设置
 THEME = "http://localhost:5173"        # 本地前端地址，生产环境自动使用GitHub Pages或THEME_URL Variable
 SLUG_LENGTH = 5                        # 短链接长度，生产环境通过SLUG_LENGTH Variable设置（可选）
+ANALYTICS_DATASET = "fig_url_analytics_dev" # Analytics Engine 数据集名称，供 SQL 查询使用
 
 # 本地开发可选配置（请取消注释并填入真实值）
 # CF_API_TOKEN = "your-dev-api-token"   # 本地API Token，生产环境通过CF_API_TOKEN Secret设置

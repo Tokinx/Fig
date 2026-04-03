@@ -52,8 +52,7 @@
     "passcodePlaceholder": "访问密码",
     "notesPlaceholder": "为这个短链接添加一些备注信息...",
     "searchPlaceholder": "搜索短链接...",
-    "advancedSettings": "高级设置",
-    "clicks": "点击次数"
+    "advancedSettings": "高级设置"
   },
   "modes": {
     "redirect": "跳转",
@@ -98,6 +97,41 @@
     "searchInType": "搜索 \"{query}\" 在 {type} 类型中，找到 {count} 条结果",
     "searchResults": "正在搜索 \"{query}\"，找到 {count} 条结果",
     "filterResults": "正在筛选 {type} 类型，找到 {count} 条结果"
+  },
+  "stats": {
+    "analytics": "访问统计",
+    "description": "查看该短链接近 90 天内的访问分析数据。",
+    "last24h": "最近 24 小时",
+    "last7d": "最近 7 天",
+    "last30d": "最近 30 天",
+    "last90d": "最近 90 天",
+    "visits": "访问",
+    "trend90d": "90 天访问趋势",
+    "dailyAverage": "日均访问",
+    "peakDay": "峰值日期",
+    "peakDayEmpty": "暂无峰值",
+    "rankedByVisits": "按近 90 天访问量排序",
+    "timelineEmpty": "最近 90 天内暂无访问记录。",
+    "countries": "访问国家/地区",
+    "geoReach": "地区分布",
+    "referrers": "来源域名",
+    "sourceHealth": "来源分布",
+    "devices": "设备类型",
+    "deviceMix": "设备构成",
+    "direct": "直接访问",
+    "unknown": "未知",
+    "share": "占比",
+    "topCaptured": "前 {count} 项覆盖 {share} 访问",
+    "deviceLabels": {
+      "desktop": "桌面端",
+      "mobile": "移动端",
+      "tablet": "平板",
+      "bot": "机器人"
+    },
+    "loading": "正在加载访问统计...",
+    "unavailable": "当前环境未启用 Analytics Engine 查询。",
+    "failed": "加载访问统计失败。",
+    "noBreakdown": "暂无可展示的数据"
   },
   "footer": {
     "buildOn": "构建于"

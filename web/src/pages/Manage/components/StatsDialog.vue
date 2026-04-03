@@ -366,7 +366,7 @@ watch(
                 </div>
 
                 <div v-if="stats?.summary?.last90d" class="rounded-md border px-4 py-3 sm:col-span-2">
-                  <div class="flex h-52 items-end gap-[1px]">
+                  <div class="flex h-40 items-end gap-[1px]">
                     <div v-for="point in timelineSeries" :key="point.key" class="group flex h-full flex-1 items-end"
                       :title="`${point.label}: ${formatter.format(point.visits)} ${t('stats.visits')}`">
                       <div class="w-full bg-black transition-opacity group-hover:opacity-50"
@@ -401,28 +401,25 @@ watch(
                 </div>
               </div>
 
-              <div v-if="section.items.length" class="space-y-4 px-4 py-4 sm:px-5">
-                <div class="space-y-3">
-                  <div v-for="(entry, index) in section.items" :key="`${section.key}-${entry.label}`"
-                    class="min-w-0 flex-1">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="min-w-0">
-                        <span class="truncate text-sm font-medium text-slate-900">
-                          {{ getBreakdownLabel(section.key, entry.label) }}
-                        </span>
+              <div v-if="section.items.length" class="space-y-1 px-4 py-4 sm:px-5">
+                <div v-for="entry in section.items" :key="`${section.key}-${entry.label}`" class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="w-full min-w-0">
+                      <span class="truncate text-sm font-medium text-slate-900">
+                        {{ getBreakdownLabel(section.key, entry.label) }}
+                      </span>
 
-                        <div class="h-2 overflow-hidden bg-white">
-                          <div class="h-full" :class="section.meterClass"
-                            :style="{ width: getBreakdownWidth(section.items, entry.visits) }" />
-                        </div>
+                      <div class="h-2 overflow-hidden bg-white">
+                        <div class="h-full" :class="section.meterClass"
+                          :style="{ width: getBreakdownWidth(section.items, entry.visits) }" />
                       </div>
+                    </div>
 
-                      <div class="shrink-0 text-right">
-                        <div class="text-sm font-semibold text-slate-900">{{ formatter.format(entry.visits) }}
-                        </div>
-                        <div class="text-[11px] text-slate-400">
-                          {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
-                        </div>
+                    <div class="shrink-0 text-right">
+                      <div class="text-sm font-semibold text-slate-900">{{ formatter.format(entry.visits) }}
+                      </div>
+                      <div class="text-[11px] text-slate-400">
+                        {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
                       </div>
                     </div>
                   </div>
@@ -444,29 +441,27 @@ watch(
                 </div>
               </div>
 
-              <div v-if="deviceSection.items.length" class="space-y-4 px-4 py-4 sm:px-5">
-                <div class="space-y-3">
-                  <div v-for="entry in deviceSection.items" :key="`devices-${entry.label}`" class="min-w-0 flex-1">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="min-w-0">
-                        <span class="truncate text-sm font-medium text-slate-900">
-                          {{ getBreakdownLabel(deviceSection.key, entry.label) }}
-                        </span>
+              <div v-if="deviceSection.items.length" class="space-y-1 px-4 py-4 sm:px-5">
+                <div v-for="entry in deviceSection.items" :key="`devices-${entry.label}`" class="min-w-0 flex-1">
+                  <div class="flex items-start justify-between gap-3">
+                    <div class="w-full min-w-0">
+                      <span class="truncate text-sm font-medium text-slate-900">
+                        {{ getBreakdownLabel(deviceSection.key, entry.label) }}
+                      </span>
 
-                        <div class="h-2 overflow-hidden bg-white">
-                          <div class="h-full bg-slate-600"
-                            :style="{ width: getBreakdownWidth(deviceSection.items, entry.visits) }" />
-                        </div>
+                      <div class="h-2 overflow-hidden bg-white">
+                        <div class="h-full bg-slate-600"
+                          :style="{ width: getBreakdownWidth(deviceSection.items, entry.visits) }" />
                       </div>
+                    </div>
 
-                      <div class="shrink-0 text-right">
-                        <div class="text-sm font-semibold text-slate-900">
-                          {{ formatter.format(entry.visits) }}
-                        </div>
-                        <div class="text-[11px] text-slate-400">
-                          {{ t("stats.share") }} {{ formatShare(getBreakdownShare(deviceSection.items, entry.visits),
-                            true) }}
-                        </div>
+                    <div class="shrink-0 text-right">
+                      <div class="text-sm font-semibold text-slate-900">
+                        {{ formatter.format(entry.visits) }}
+                      </div>
+                      <div class="text-[11px] text-slate-400">
+                        {{ t("stats.share") }} {{ formatShare(getBreakdownShare(deviceSection.items, entry.visits),
+                          true) }}
                       </div>
                     </div>
                   </div>

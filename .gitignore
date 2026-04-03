@@ -38,3 +38,4 @@ todo.md
 ANALYTICS_SETUP.md
 workers/cookies.txt
 data/
+*.lock

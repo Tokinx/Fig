@@ -98,7 +98,7 @@ const closeDialog = () => {
 
 <template>
   <Dialog :open="visible" @update:open="closeDialog">
-    <DialogContent class="max-w-xl shadow-none border-0 bg-transparent">
+    <DialogContent class="max-w-xl shadow-lg !rounded-2xl bg-white/60">
       <div class="space-y-6 py-4">
         <!-- QR码显示区域 -->
         <div class="flex flex-col items-center space-y-4">
@@ -130,7 +130,7 @@ const closeDialog = () => {
           <!-- 操作按钮 -->
           <div class="flex flex-col gap-2">
             <!-- 短链接信息 -->
-            <code class="flex-1 bg-gray-100 p-2 px-3 rounded-full text-sm max-w-80 overflow-auto">
+            <code class="flex-1 bg-gray-100 p-2 px-4 rounded-full text-sm max-w-80 overflow-auto">
               {{ shortUrl }}
             </code>
             <div class="flex items-center justify-center gap-2">

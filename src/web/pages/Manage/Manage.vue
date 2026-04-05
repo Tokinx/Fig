@@ -1,64 +1,46 @@
 <script setup>
-import { ref, h, watch, computed } from "vue";
-import { useRouter } from "vue-router";
-import { Separator } from "@/components/ui/separator";
+import { ref, watch, computed } from "vue";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import SlugItems from "./components/SlugItems.vue";
-import { openLinkPanel } from "./components/use-link-panel";
 import { getModeList } from "@/lib/link-config";
 import LanguageSwitcher from "@/components/LanguageSwitcher.vue";
 import { useI18n } from 'vue-i18n';
 
 const { t, locale } = useI18n();
 
-const router = useRouter();
 const originalUrl = location.host;
 const table = ref(null);
 const focusState = ref(false);
 const searchQuery = ref("");
 const lastSearched = ref(""); // 记录上次搜索的内容
 const filterMode = ref("all"); // 筛选模式
+const getSearchQuery = () => searchQuery.value.trim();
 
 const handleCreateLink = () => {
-  // 打开创建链接的面板
-  openLinkPanel()
-    .then(() => {
-      // 创建成功后刷新列表
-      if (table.value) {
-        table.value.refresh(searchQuery.value.trim(), filterMode.value);
-      }
-    })
-    .catch(() => {
-      // 用户取消或创建失败，不需要刷新
-    });
+  table.value?.createLink();
 };
 
 // 处理搜索
 const handleSearch = () => {
-  if (table.value && searchQuery.value.trim() !== lastSearched.value) {
-    lastSearched.value = searchQuery.value.trim();
-    table.value.search(lastSearched.value, filterMode.value);
-  }
+  const query = getSearchQuery();
+  if (query === lastSearched.value) return;
+
+  lastSearched.value = query;
+  table.value?.search(query, filterMode.value);
 };
 
 // 清空搜索
 const clearSearch = () => {
   searchQuery.value = "";
   lastSearched.value = "";
-  if (table.value) {
-    table.value.search("", filterMode.value);
-  }
+  table.value?.search("", filterMode.value);
 };
 
 // 处理筛选模式变化
 const handleFilterChange = (mode) => {
   filterMode.value = mode;
-  if (table.value) {
-    table.value.filter(searchQuery.value.trim(), mode);
-  }
+  table.value?.filter(getSearchQuery(), mode);
 };
 
 // 监听输入框清空

@@ -1,15 +1,10 @@
 <script setup>
 import { ref, onMounted, onUnmounted, nextTick, computed } from "vue";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import SlugCard from "./SlugCard.vue";
 import CreateLinkDialog from "./CreateLinkDialog.vue";
 import { useI18n } from 'vue-i18n';
 
-import { state } from "./use-link-panel";
 import { openLinkPanel } from "./use-link-panel";
 import { getModeList } from "@/lib/link-config";
 
@@ -185,10 +180,12 @@ const filter = (query, filterMode) => {
   refresh(query, filterMode);
 };
 
-const handleCreateLink = () => {
+const refreshCurrentResults = () => refresh(currentSearch.value, currentFilter.value);
+
+const createLink = () => {
   openLinkPanel()
     .then(() => {
-      refresh(currentSearch.value, currentFilter.value);
+      refreshCurrentResults();
     })
     .catch(() => {
       // 用户取消或创建失败，不需要刷新
@@ -230,7 +227,7 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll);
 });
 
-defineExpose({ refresh, search, filter });
+defineExpose({ refresh, search, filter, createLink });
 </script>
 <template>
   <div class="w-full">
@@ -276,7 +273,7 @@ defineExpose({ refresh, search, filter });
           </p>
         </div>
         <div v-if="!(currentSearch || currentFilter !== 'all')">
-          <Button @click="handleCreateLink" class="gap-2">
+          <Button @click="createLink" class="gap-2">
             <i class="icon-[material-symbols--add] h-4 w-4" />
             {{ t('table.createLink') }}
           </Button>
@@ -286,8 +283,7 @@ defineExpose({ refresh, search, filter });
 
     <!-- 结果列表 -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      <SlugCard v-for="item in tableData" :key="item.oid" v-bind="{ item }"
-        @refresh="() => refresh(currentSearch, currentFilter)" />
+      <SlugCard v-for="item in tableData" :key="item.oid" v-bind="{ item }" @refresh="refreshCurrentResults" />
     </div>
 
     <!-- 加载更多指示器 -->

@@ -84,7 +84,7 @@
 
 ### 3.2 项目结构
 ```
-web/src/
+src/web/
 ├── locales/           # 语言文件目录
 │   ├── zh-CN.json    # 中文语言包
 │   ├── en.json       # 英文语言包

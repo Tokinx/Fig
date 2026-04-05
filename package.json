@@ -1,0 +1,60 @@
+{
+  "name": "fig",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "concurrently \"bun run dev:web\" \"bun run dev:worker\"",
+    "dev:web": "vite",
+    "dev:worker": "wrangler dev --config wrangler.jsonc",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "bun run build && wrangler deploy --config wrangler.jsonc"
+  },
+  "cloudflare": {
+    "bindings": {
+      "PASSWORD": {
+        "description": "设置管理后台登录密码。不要保留默认值，建议改成高强度密码。"
+      },
+      "SQLITE": {
+        "description": "用于存储短链接数据的 D1 数据库。Deploy to Cloudflare 会按 wrangler.jsonc 中的绑定自动创建。"
+      },
+      "ANALYTICS": {
+        "description": "用于统计访问数据的 Analytics Engine 数据集。Deploy to Cloudflare 会自动创建对应绑定。"
+      },
+      "SLUG_LENGTH": {
+        "description": "随机短链长度，默认是 `5`。如果你更重视碰撞概率，可以改得更大。"
+      }
+    }
+  },
+  "dependencies": {
+    "@radix-icons/vue": "^1.0.0",
+    "@vueuse/core": "^10.7.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "hono": "^4.8.9",
+    "qrcode": "^1.5.4",
+    "radix-vue": "^1.2.6",
+    "tailwind-merge": "^3.3.1",
+    "tailwindcss-animate": "^1.0.7",
+    "v-calendar": "next",
+    "vue": "^3.3.11",
+    "vue-i18n": "11",
+    "vue-router": "4",
+    "vue3-clipboard": "^1.0.0"
+  },
+  "devDependencies": {
+    "@iconify/json": "^2.2.166",
+    "@iconify/tailwind": "^0.1.4",
+    "@intlify/unplugin-vue-i18n": "^6.0.8",
+    "@vitejs/plugin-vue": "^4.5.2",
+    "autoprefixer": "^10.4.16",
+    "concurrently": "^9.2.1",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.9.3",
+    "vite": "^5.0.8",
+    "wrangler": "4"
+  }
+}

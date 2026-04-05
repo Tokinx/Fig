@@ -1,0 +1,31 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "fig",
+  "main": "src/workers/worker.js",
+  "compatibility_date": "2024-01-04",
+  "workers_dev": true,
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+  "vars": {
+    "PASSWORD": "change-me-before-deploy",
+    "FRONTEND_DEV_SERVER_URL": "http://127.0.0.1:5173",
+    "SLUG_LENGTH": 5,
+    "ANALYTICS_DATASET": "fig_url_analytics"
+  },
+  "d1_databases": [
+    {
+      "binding": "SQLITE",
+      "database_name": "fig",
+      "database_id": "00000000-0000-0000-0000-000000000000"
+    }
+  ],
+  "analytics_engine_datasets": [
+    {
+      "binding": "ANALYTICS",
+      "dataset": "fig_url_analytics"
+    }
+  ]
+}

@@ -1,80 +1,60 @@
-# 前端自动构建流程
+# 前端构建与静态资源发布
 
-## 概述
+## 当前模型
 
-本项目使用GitHub Actions自动化构建前端代码。当`web/`目录下的文件发生变更时，会自动触发构建流程。
+前端已经不再单独发布到 `pages/`，而是作为 Cloudflare Workers 的静态资源一起部署。
 
-## 工作流程
+构建链路如下：
 
-1. **触发条件**：
-   - 向`main`分支推送代码且包含`web/`目录的变更
-   - 向`main`分支提交Pull Request且包含`web/`目录的变更
-
-2. **构建步骤**：
-   - 检出代码
-   - 设置Bun运行环境
-   - 缓存依赖以提高构建速度
-   - 安装项目依赖
-   - 使用`ENV=production bun run build`构建前端
-   - 将构建输出`web/dist`重命名为`pages`
-   - 检查是否有变更需要提交
-   - 自动提交并推送到当前仓库
-
-3. **输出**：
-   - 构建后的静态文件位于`pages/`目录
-   - 自动提交包含构建时间和源代码哈希的详细信息
+1. Vite 从根目录读取 `index.html`
+2. 前端源码位于 `src/web/`
+3. `bun run build` 输出到根目录 `dist/`
+4. `wrangler deploy` 将 `dist/` 作为 `[assets]` 一并发布
 
 ## 本地开发
 
-### 开发模式
 ```bash
-cd web
 bun install
-bun run dev
+bun run dev:web
 ```
 
-### 本地构建
+如果同时需要联调 Worker：
+
 ```bash
-cd web
-bun run build
-# 输出在 web/dist/ 目录
+bun run dev:worker
 ```
 
-### 预览构建结果
-```bash
-cd web
-bun run preview
-```
+Worker 在本地会根据 `FRONTEND_DEV_SERVER_URL` 回退代理到 Vite dev server，因此仍然保留热更新体验。
 
-## 文件结构
+## CI 行为
 
-```
+`.github/workflows/build-frontend.yml` 现在只负责：
+
+- 安装根目录依赖
+- 执行 `bun run build`
+- 校验 `dist/` 是否生成
+
+它不再：
+
+- 重命名 `web/dist`
+- 生成 `pages/`
+- 自动提交构建产物回仓库
+
+## 目录
+
+```text
 .
-├── .github/
-│   └── workflows/
-│       └── build-frontend.yml    # GitHub Actions工作流
-├── web/                          # 前端源代码
-│   ├── src/
-│   ├── package.json
-│   ├── vite.config.js
-│   └── ...
-├── pages/                        # 自动生成的构建输出
-│   ├── index.html
-│   ├── assets/
-│   └── ...
-└── workers/                      # 后端代码
+├── public/
+├── src/
+│   └── web/
+├── dist/
+├── index.html
+├── package.json
+└── vite.config.ts
 ```
 
 ## 注意事项
 
-- `pages/`目录由GitHub Actions自动管理，请勿手动修改
-- 每次web目录的变更都会触发自动构建
-- 构建失败时会在Actions页面显示详细错误信息
-- 如果构建输出没有变更，不会创建新的提交
-
-## 自定义配置
-
-如需修改构建行为，请编辑：
-- `.github/workflows/build-frontend.yml` - 修改GitHub Actions工作流
-- `web/vite.config.js` - 修改Vite构建配置
-- `web/package.json` - 修改构建脚本
+- `dist/` 是构建产物，不应手工编辑
+- 生产静态资源由 Worker 的 `ASSETS` 绑定提供
+- 若新增根级公共资源，例如 `robots.txt` 或 `manifest.webmanifest`，请放入 `public/`

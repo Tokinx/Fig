@@ -10,17 +10,21 @@
     "run_worker_first": true
   },
   "vars": {
-    "PASSWORD": "change-me-before-deploy",
     "SLUG_LENGTH": 5,
-    "CF_API_TOKEN": "",
-    "CF_ACCOUNT_ID": "",
     "ANALYTICS_DATASET": "fig_url_analytics"
+  },
+  "secrets": {
+    "required": [
+      "PASSWORD",
+      "CF_API_TOKEN",
+      "CF_ACCOUNT_ID"
+    ]
   },
   "d1_databases": [
     {
       "binding": "SQLITE",
-      "database_name": "fig",
-      "database_id": "00000000-0000-0000-0000-000000000000"
+      "database_name": "shorten",
+      "database_id": "27125d38-dcf0-429b-afb4-8aa3df4533af"
     }
   ],
   "analytics_engine_datasets": [

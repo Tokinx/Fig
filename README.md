@@ -16,8 +16,8 @@
 
 ### 手动部署：
 
-- `vite build` 生成 `dist/`
-- `wrangler deploy --config wrangler.jsonc` 上传 Worker 代码和静态资源
+- 克隆项目到本地，修改 `wrangler.jsonc` 和 `.dev.vars`
+- `npm run deploy` 上传 Worker 代码和静态资源
 
 ## 路由说明
 
@@ -63,14 +63,19 @@ Fig/
 bun install
 ```
 
-2. 配置根目录 `wrangler.jsonc`：
+2. 复制本地 secret 模板：
+
+```bash
+cp .dev.vars.example .dev.vars
+```
+
+3. 配置根目录 `wrangler.local.jsonc`：
 
 ```jsonc
 {
   "name": "fig-dev",
   "main": "src/workers/worker.js",
   "vars": {
-    "PASSWORD": "dev-password-change-me",
     "FRONTEND_DEV_SERVER_URL": "http://127.0.0.1:5173",
     "SLUG_LENGTH": 5
   },
@@ -84,7 +89,15 @@ bun install
 }
 ```
 
-3. 分别启动前端和 Worker：
+4. 在 `.dev.vars` 中填写本地敏感变量：
+
+```env
+PASSWORD=dev-password-change-me
+CF_API_TOKEN=your-cloudflare-api-token
+CF_ACCOUNT_ID=your-cloudflare-account-id
+```
+
+5. 分别启动前端和 Worker：
 
 ```bash
 bun run dev:web
@@ -95,3 +108,4 @@ bun run dev:worker
 
 - 前端开发服务器：`http://127.0.0.1:5173`
 - Worker 开发服务器：`http://127.0.0.1:8787`
+- `.dev.vars` 只用于本地开发，不要提交到仓库

@@ -1,15 +1,24 @@
 # Cloudflare Workers 部署设置
 
-## GitHub Secrets
+## Worker Secrets
 
-在仓库 `Settings > Secrets and variables > Actions` 中配置：
+生产环境不要把敏感值写进 `wrangler.jsonc`。下面 3 个值应通过 Cloudflare Worker secrets 注入：
 
 ```text
-WORKER_PASSWORD
+PASSWORD
 CF_API_TOKEN
 CF_ACCOUNT_ID
-D1_DATABASE_ID
 ```
+
+推荐命令：
+
+```bash
+wrangler secret put PASSWORD
+wrangler secret put CF_API_TOKEN
+wrangler secret put CF_ACCOUNT_ID
+```
+
+如果你通过 GitHub Actions 部署，也应该先在 Cloudflare Worker 上写入这些 secrets，而不是只放在 GitHub Secrets 里。
 
 ## GitHub Variables
 
@@ -18,6 +27,7 @@ WORKER_NAME
 SLUG_LENGTH
 D1_DATABASE_NAME
 ANALYTICS_DATASET
+D1_DATABASE_ID
 ```
 
 `THEME_URL` 已废弃。生产环境前端静态资源现在直接来自 Worker 绑定的 `dist/`，不再依赖 GitHub Pages。
@@ -75,10 +85,16 @@ D1_DATABASE_NAME = "slug"
 ANALYTICS_DATASET = "fig_url_analytics"
 ```
 
+其中：
+
+- `SLUG_LENGTH`、`ANALYTICS_DATASET` 这类非敏感配置保留在 `wrangler.jsonc` 的 `vars`
+- `PASSWORD`、`CF_API_TOKEN`、`CF_ACCOUNT_ID` 使用 Worker secrets
+
 ## 安全注意事项
 
 - 不要把真实 Cloudflare Token、Account ID 或数据库 ID 写入仓库中的 `wrangler.jsonc`
-- 如果使用一键部署，请先修改默认 `PASSWORD`
+- 不要在 `wrangler.jsonc` 中使用不存在的 `secret` 字段，Wrangler 会忽略它
+- 本地开发请使用 `.dev.vars`，并确保该文件不提交到仓库
 - 生产部署只应该由 `main` 分支触发
 
 ## 故障排查

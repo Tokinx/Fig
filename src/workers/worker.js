@@ -4,9 +4,9 @@ import Utils from "./utils.js";
 import ControllerAPI from "./api.js";
 import AnalyticsService from "./analytics.js";
 
-const APP_ENTRY = "/index.html";
+const APP_ENTRY = "/";
 const STATIC_ASSET_PREFIXES = ["/assets/", "/src/", "/@vite/", "/@id/", "/@fs/", "/node_modules/"];
-const STATIC_ASSET_PATHS = new Set(["/favicon.svg"]);
+const STATIC_ASSET_PATHS = new Set(["/favicon.svg", "/index.html"]);
 
 const app = new Hono();
 

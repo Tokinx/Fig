@@ -67,14 +67,25 @@
   "messages": {
     "createSuccess": "建立成功",
     "updateSuccess": "更新成功",
+    "deleteSuccess": "刪除成功",
     "createFailed": "建立失敗",
     "updateFailed": "更新失敗",
+    "deleteFailed": "刪除失敗",
     "operationFailed": "操作失敗",
     "networkError": "網路錯誤，請檢查連線後重試",
     "generateFailed": "產生失敗",
     "generateFailedDesc": "無法產生短網址標識符，請手動輸入",
     "linkCreated": "短網址 {slug} 已建立",
-    "linkUpdated": "短網址 {slug} 已更新"
+    "linkUpdated": "短網址 {slug} 已更新",
+    "linkDeleted": "短網址 {slug} 已刪除"
+  },
+  "slugCard": {
+    "actions": {
+      "qrCode": "QR Code",
+      "duplicate": "複製"
+    },
+    "deleteFailedDesc": "刪除操作失敗，請重試",
+    "unknownOperate": "未知操作"
   },
   "pages": {
     "loginTitle": "登入",

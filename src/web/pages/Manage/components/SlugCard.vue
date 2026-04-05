@@ -50,7 +50,7 @@ const statsVisible = ref(false);
 
 const operates = computed(() => [
   {
-    name: "Edit",
+    name: t("common.edit"),
     icon: "icon-[material-symbols--edit-document-outline]",
     operate: "edit",
   },
@@ -60,17 +60,17 @@ const operates = computed(() => [
     operate: "analytics",
   },
   {
-    name: "QR Code",
+    name: t("slugCard.actions.qrCode"),
     icon: "icon-[material-symbols--qr-code]",
     operate: "qr-code",
   },
   {
-    name: "Duplicate",
+    name: t("slugCard.actions.duplicate"),
     icon: "icon-[material-symbols--file-copy-outline]",
     operate: "duplicate",
   },
   {
-    name: "Delete",
+    name: t("common.delete"),
     icon: "icon-[material-symbols--delete-outline]",
     operate: "delete",
     class: "!text-destructive hover:!bg-destructive hover:!text-destructive-foreground",
@@ -79,7 +79,11 @@ const operates = computed(() => [
 
 const emitRefresh = () => {
   emit("refresh");
-  toast({ title: "操作成功", description: `短链接 ${item.value.slug} 已更新`, class: "rounded-2xl" });
+  toast({
+    title: t("messages.updateSuccess"),
+    description: t("messages.linkUpdated", { slug: item.value.slug }),
+    class: "rounded-2xl",
+  });
 };
 
 const handleOperate = async (operate) => {
@@ -120,23 +124,32 @@ const handleOperate = async (operate) => {
         .then((rv) => {
           console.log(rv);
           if (rv.code === 0) {
-            toast({ title: "删除成功", description: `短链接 ${item.value.slug} 已删除`, class: "rounded-2xl" });
+            toast({
+              title: t("messages.deleteSuccess"),
+              description: t("messages.linkDeleted", { slug: item.value.slug }),
+              class: "rounded-2xl",
+            });
             emit("refresh");
           } else {
             toast({
-              title: "删除失败",
-              description: rv.msg || "删除操作失败，请重试",
+              title: t("messages.deleteFailed"),
+              description: rv.msg || t("slugCard.deleteFailedDesc"),
               variant: "destructive",
               class: "rounded-2xl",
             });
           }
         })
         .catch(() => {
-          toast({ title: "删除失败", description: "网络错误，请重试", variant: "destructive", class: "rounded-2xl" });
+          toast({
+            title: t("messages.deleteFailed"),
+            description: t("messages.networkError"),
+            variant: "destructive",
+            class: "rounded-2xl",
+          });
         });
       break;
     default:
-      alert({ title: "Error", description: "Unknown operate" });
+      alert({ title: t("common.error"), description: t("slugCard.unknownOperate") });
       break;
   }
 };
@@ -154,33 +167,23 @@ const handleOperate = async (operate) => {
             </h3>
 
             <div class="flex items-center space-x-1 ml-3">
-              <Button
-                variant="ghost"
-                size="icon"
-                @click="onClipboard"
-                :class="['h-6 w-6 shrink-0 text-muted-foreground', _copied && '!text-green-600 !bg-green-50']"
-              >
+              <Button variant="ghost" size="icon" @click="onClipboard"
+                :class="['h-6 w-6 shrink-0 text-muted-foreground', _copied && '!text-green-600 !bg-green-50']">
                 <i v-if="_copied == null" class="icon-[material-symbols--content-copy-outline-rounded] h-4 w-4" />
                 <i v-else-if="_copied" class="icon-[material-symbols--check] h-4 w-4" />
                 <i v-else class="icon-[material-symbols--close] h-4 w-4" />
               </Button>
               <DropdownMenu>
                 <DropdownMenuTrigger as-child>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    class="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground"
-                  >
+                  <Button variant="ghost" size="icon"
+                    class="h-6 w-6 shrink-0 text-muted-foreground hover:text-foreground">
                     <i class="icon-[material-symbols--more-vert] h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" class="rounded-2xl backdrop-blur-md bg-white/60">
-                  <DropdownMenuItem
-                    v-for="op in operates"
-                    :key="op.operate"
-                    :class="['flex items-center gap-2 cursor-pointer text-muted-foreground rounded-full', op.class]"
-                    @click="handleOperate(op.operate)"
-                  >
+                  <DropdownMenuItem v-for="op in operates" :key="op.operate"
+                    :class="['flex items-center gap-2 cursor-pointer text-muted-foreground rounded-full px-3', op.class]"
+                    @click="handleOperate(op.operate)">
                     <i :class="op.icon + ' h-4 w-4'" />
                     <span>{{ op.name }}</span>
                   </DropdownMenuItem>

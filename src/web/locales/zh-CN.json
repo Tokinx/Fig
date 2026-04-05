@@ -67,14 +67,25 @@
   "messages": {
     "createSuccess": "创建成功",
     "updateSuccess": "更新成功",
+    "deleteSuccess": "删除成功",
     "createFailed": "创建失败",
     "updateFailed": "更新失败",
+    "deleteFailed": "删除失败",
     "operationFailed": "操作失败",
     "networkError": "网络错误，请检查连接后重试",
     "generateFailed": "生成失败",
     "generateFailedDesc": "无法生成短链接标识符，请手动输入",
     "linkCreated": "短链接 {slug} 已创建",
-    "linkUpdated": "短链接 {slug} 已更新"
+    "linkUpdated": "短链接 {slug} 已更新",
+    "linkDeleted": "短链接 {slug} 已删除"
+  },
+  "slugCard": {
+    "actions": {
+      "qrCode": "二维码",
+      "duplicate": "复制"
+    },
+    "deleteFailedDesc": "删除操作失败，请重试",
+    "unknownOperate": "未知操作"
   },
   "pages": {
     "loginTitle": "登录",

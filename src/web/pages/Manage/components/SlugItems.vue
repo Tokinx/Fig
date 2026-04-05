@@ -101,13 +101,13 @@ const ensureScrollable = async (requestId = activeRequestId) => {
 const refresh = async (searchQuery = '', filterMode = 'all') => {
   const requestId = ++activeRequestId;
   loading.value = true;
-  
+
   // 重置数据
   pagination.value.page = 1;
   pagination.value.count = 0;
   tableData.value = [];
   hasMore.value = true;
-  
+
   try {
     const { count, items } = await fetchPage(1, searchQuery, filterMode);
     if (requestId !== activeRequestId) {
@@ -135,7 +135,7 @@ const refresh = async (searchQuery = '', filterMode = 'all') => {
 
 const loadMore = async ({ requestId = activeRequestId, skipEnsureScrollable = false } = {}) => {
   if (loading.value || loadingMore.value || !hasMore.value) return false;
-  
+
   loadingMore.value = true;
   let loaded = false;
   const nextPage = pagination.value.page + 1;
@@ -185,6 +185,16 @@ const filter = (query, filterMode) => {
   refresh(query, filterMode);
 };
 
+const handleCreateLink = () => {
+  openLinkPanel()
+    .then(() => {
+      refresh(currentSearch.value, currentFilter.value);
+    })
+    .catch(() => {
+      // 用户取消或创建失败，不需要刷新
+    });
+};
+
 // 获取模式标签 - 使用计算属性确保响应式
 const getModeLabel = computed(() => (mode) => {
   const modeOption = getModeList().find(m => m.value === mode);
@@ -229,7 +239,9 @@ defineExpose({ refresh, search, filter });
       <div class="flex items-center justify-between">
         <div class="text-sm text-muted-foreground">
           <span v-if="currentSearch && currentFilter !== 'all'">
-            {{ t('table.searchInType', { query: currentSearch, type: getModeLabel.value(currentFilter), count: pagination.count }) }}
+            {{ t('table.searchInType', {
+              query: currentSearch, type: getModeLabel.value(currentFilter), count:
+                pagination.count }) }}
           </span>
           <span v-else-if="currentSearch">
             {{ t('table.searchResults', { query: currentSearch, count: pagination.count }) }}
@@ -264,7 +276,7 @@ defineExpose({ refresh, search, filter });
           </p>
         </div>
         <div v-if="!(currentSearch || currentFilter !== 'all')">
-          <Button @click="openLinkPanel" class="gap-2">
+          <Button @click="handleCreateLink" class="gap-2">
             <i class="icon-[material-symbols--add] h-4 w-4" />
             {{ t('table.createLink') }}
           </Button>
@@ -274,7 +286,8 @@ defineExpose({ refresh, search, filter });
 
     <!-- 结果列表 -->
     <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-      <SlugCard v-for="item in tableData" :key="item.oid" v-bind="{ item }" @refresh="() => refresh(currentSearch, currentFilter)" />
+      <SlugCard v-for="item in tableData" :key="item.oid" v-bind="{ item }"
+        @refresh="() => refresh(currentSearch, currentFilter)" />
     </div>
 
     <!-- 加载更多指示器 -->
@@ -288,7 +301,8 @@ defineExpose({ refresh, search, filter });
         {{ t('table.allRecordsShown', { count: tableData.length }) }}
       </div>
       <div v-else class="py-4 flex items-center justify-center">
-        <Button type="button" variant="ghost" class="rounded-full gap-1 text-muted-foreground text-sm" @click="loadMore">
+        <Button type="button" variant="ghost" class="rounded-full gap-1 text-muted-foreground text-sm"
+          @click="loadMore">
           <i class="icon-[material-symbols--keyboard-arrow-down] h-4 w-4" />
           {{ t('table.scrollToLoadMore') }}
         </Button>

@@ -67,14 +67,25 @@
   "messages": {
     "createSuccess": "Created successfully",
     "updateSuccess": "Updated successfully",
+    "deleteSuccess": "Deleted successfully",
     "createFailed": "Creation failed",
     "updateFailed": "Update failed",
+    "deleteFailed": "Deletion failed",
     "operationFailed": "Operation failed",
     "networkError": "Network error, please check connection and try again",
     "generateFailed": "Generation failed",
     "generateFailedDesc": "Unable to generate short link identifier, please enter manually",
     "linkCreated": "Short link {slug} created",
-    "linkUpdated": "Short link {slug} updated"
+    "linkUpdated": "Short link {slug} updated",
+    "linkDeleted": "Short link {slug} deleted"
+  },
+  "slugCard": {
+    "actions": {
+      "qrCode": "QR Code",
+      "duplicate": "Duplicate"
+    },
+    "deleteFailedDesc": "Delete operation failed, please try again",
+    "unknownOperate": "Unknown action"
   },
   "pages": {
     "loginTitle": "Login",

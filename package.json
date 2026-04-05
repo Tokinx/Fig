@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently \"bun run dev:web\" \"bun run dev:worker\"",
     "dev:web": "vite",
-    "dev:worker": "wrangler dev --config wrangler.jsonc",
+    "dev:worker": "wrangler dev --config wrangler.local.jsonc",
     "build": "vite build",
     "preview": "vite preview",
     "deploy": "bun run build && wrangler deploy --config wrangler.jsonc"

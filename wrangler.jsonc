@@ -11,8 +11,9 @@
   },
   "vars": {
     "PASSWORD": "change-me-before-deploy",
-    "FRONTEND_DEV_SERVER_URL": "http://127.0.0.1:5173",
     "SLUG_LENGTH": 5,
+    "CF_API_TOKEN": "",
+    "CF_ACCOUNT_ID": "",
     "ANALYTICS_DATASET": "fig_url_analytics"
   },
   "d1_databases": [

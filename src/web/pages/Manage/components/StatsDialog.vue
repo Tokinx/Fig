@@ -3,7 +3,23 @@ import { computed, ref, watch } from "vue";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "vue-i18n";
+
+const worldMapShapes = [
+  "M7 12 L18 9 L28 12 L32 18 L28 24 L22 23 L20 18 L14 16 L10 19 L7 16 Z",
+  "M24 26 L28 28 L30 34 L28 42 L24 48 L21 43 L22 35 Z",
+  "M43 11 L48 10 L51 12 L50 16 L45 17 L42 14 Z",
+  "M46 18 L50 19 L54 24 L53 32 L50 39 L46 37 L44 30 L45 24 Z",
+  "M52 11 L64 10 L76 13 L86 18 L90 24 L85 28 L80 25 L72 25 L67 22 L60 23 L56 20 L52 17 Z",
+  "M80 37 L86 39 L88 44 L83 47 L78 44 Z",
+];
+
+const mapGridLines = {
+  horizontal: [13, 26, 39],
+  vertical: [16.7, 33.4, 50, 66.6, 83.3],
+};
 
 const props = defineProps({
   visible: {
@@ -22,10 +38,27 @@ const { t, locale } = useI18n();
 const loading = ref(false);
 const error = ref("");
 const stats = ref(null);
+const requestSequence = ref(0);
+const rangePreset = ref("30d");
+
+const startOfLocalDay = (value) => {
+  const date = new Date(value);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+const addLocalDays = (value, days) => {
+  const date = startOfLocalDay(value);
+  date.setDate(date.getDate() + days);
+  return date;
+};
+
+const today = startOfLocalDay(new Date());
+const customStartDate = ref(addLocalDays(today, -29));
+const customEndDate = ref(today);
 
 const formatter = new Intl.NumberFormat();
-const compactFormatter = new Intl.NumberFormat(undefined, {
-  notation: "compact",
+const decimalFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 1,
 });
 const percentFormatter = new Intl.NumberFormat(undefined, {
@@ -41,11 +74,6 @@ const closeDialog = (open) => {
   emit("update:visible", open);
 };
 
-const shortUrl = computed(() => {
-  if (!props.item?.slug) return "";
-  return `${location.origin}/${props.item.slug}`;
-});
-
 const title = computed(() => props.item?.displayName || props.item?.slug || t("stats.analytics"));
 
 const regionNames = computed(() => {
@@ -53,10 +81,42 @@ const regionNames = computed(() => {
   return new Intl.DisplayNames([locale.value, "en"], { type: "region" });
 });
 
+const rangeOptions = computed(() => [
+  { value: "1d", label: t("stats.range1d") },
+  { value: "7d", label: t("stats.range7d") },
+  { value: "30d", label: t("stats.range30d") },
+  { value: "custom", label: t("stats.rangeCustom") },
+]);
+
 const getModeLabel = (mode) => {
   const key = `modes.${mode}`;
   const label = t(key);
   return label === key ? mode : label;
+};
+
+const formatDateKey = (value) => {
+  if (!value) return "";
+  return format(startOfLocalDay(value), "yyyy-MM-dd");
+};
+
+const parseDateKeyUtc = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const parseDateKeyLocal = (value) => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(value || ""))) return null;
+  const [year, month, day] = String(value).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+  return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const addUtcDays = (value, days) => {
+  const date = new Date(value);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date;
 };
 
 const normalizeDateKey = (value) => {
@@ -66,21 +126,118 @@ const normalizeDateKey = (value) => {
   return date.toISOString().slice(0, 10);
 };
 
+const formatDateLabel = (value, pattern = "MM/dd") => {
+  const date = parseDateKeyLocal(value);
+  return date ? format(date, pattern) : value || "";
+};
+
+const handleRangePresetChange = (value) => {
+  rangePreset.value = value || "30d";
+};
+
+const handleCustomStartChange = (value) => {
+  console.log("Custom start date changed:", value);
+  customStartDate.value = value ? startOfLocalDay(value) : null;
+};
+
+const handleCustomEndChange = (value) => {
+  customEndDate.value = value ? startOfLocalDay(value) : null;
+};
+
+const rangeValidationError = computed(() => {
+  if (rangePreset.value !== "custom" || !customStartDate.value || !customEndDate.value) {
+    return "";
+  }
+
+  return startOfLocalDay(customStartDate.value) > startOfLocalDay(customEndDate.value)
+    ? t("stats.customRangeInvalid")
+    : "";
+});
+
+const requestPayload = computed(() => {
+  if (rangePreset.value !== "custom") {
+    return { preset: rangePreset.value };
+  }
+
+  if (!customStartDate.value || !customEndDate.value || rangeValidationError.value) {
+    return null;
+  }
+
+  return {
+    preset: "custom",
+    startDate: formatDateKey(customStartDate.value),
+    endDate: formatDateKey(customEndDate.value),
+  };
+});
+
+const requestFingerprint = computed(() => {
+  if (requestPayload.value) {
+    return JSON.stringify(requestPayload.value);
+  }
+
+  return JSON.stringify({
+    preset: rangePreset.value,
+    startDate: customStartDate.value ? formatDateKey(customStartDate.value) : "",
+    endDate: customEndDate.value ? formatDateKey(customEndDate.value) : "",
+    invalid: true,
+  });
+});
+
+const displayedRange = computed(() => {
+  if (stats.value?.range?.startDate && stats.value?.range?.endDate) {
+    return stats.value.range;
+  }
+
+  if (requestPayload.value?.startDate && requestPayload.value?.endDate) {
+    const startAt = parseDateKeyUtc(requestPayload.value.startDate);
+    const endAt = parseDateKeyUtc(requestPayload.value.endDate);
+    const days = startAt && endAt ? Math.floor((endAt.getTime() - startAt.getTime()) / 86400000) + 1 : 0;
+
+    return {
+      ...requestPayload.value,
+      days,
+    };
+  }
+
+  return null;
+});
+
+const rangeSummary = computed(() => {
+  if (displayedRange.value?.startDate && displayedRange.value?.endDate) {
+    return t("stats.rangeSummary", {
+      start: formatDateLabel(displayedRange.value.startDate, "yyyy/MM/dd"),
+      end: formatDateLabel(displayedRange.value.endDate, "yyyy/MM/dd"),
+      days: displayedRange.value.days || 0,
+    });
+  }
+
+  const selectedOption = rangeOptions.value.find((option) => option.value === rangePreset.value);
+  return selectedOption?.label || "";
+});
+
 const timelineSeries = computed(() => {
+  const range = stats.value?.range;
+  if (!range?.startDate || !range?.endDate) {
+    return [];
+  }
+
+  const startAt = parseDateKeyUtc(range.startDate);
+  const days = Number(range.days || 0);
+  if (!startAt || !days) {
+    return [];
+  }
+
   const lookup = new Map((stats.value?.timeline || []).map((point) => [normalizeDateKey(point.bucket), Number(point.visits || 0)]));
   const points = [];
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
 
-  for (let index = 89; index >= 0; index -= 1) {
-    const date = new Date(today);
-    date.setUTCDate(today.getUTCDate() - index);
-
+  for (let index = 0; index < days; index += 1) {
+    const date = addUtcDays(startAt, index);
     const key = date.toISOString().slice(0, 10);
     const visits = lookup.get(key) || 0;
     points.push({
       key,
-      label: format(date, "MM/dd"),
+      label: formatDateLabel(key, "MM/dd"),
+      fullLabel: formatDateLabel(key, "yyyy/MM/dd"),
       visits,
     });
   }
@@ -89,22 +246,17 @@ const timelineSeries = computed(() => {
 
   return points.map((point) => ({
     ...point,
-    height: maxVisits > 0 ? Math.max((point.visits / maxVisits) * 100, point.visits > 0 ? 6 : 2) : 2,
+    height: maxVisits > 0 ? Math.max((point.visits / maxVisits) * 100, point.visits > 0 ? 8 : 2) : 2,
   }));
 });
 
-const totalVisits90d = computed(() => Number(stats.value?.summary?.last90d || 0));
-
-const summaryCards = computed(() => [
-  { key: "last24h", label: t("stats.last24h"), value: stats.value?.summary?.last24h || 0 },
-  { key: "last7d", label: t("stats.last7d"), value: stats.value?.summary?.last7d || 0 },
-  { key: "last30d", label: t("stats.last30d"), value: stats.value?.summary?.last30d || 0 },
-  { key: "last90d", label: t("stats.last90d"), value: stats.value?.summary?.last90d || 0 },
-]);
+const totalVisits = computed(() => Number(stats.value?.summary?.totalVisits || 0));
+const totalVisitors = computed(() => Number(stats.value?.summary?.totalVisitors || 0));
+const selectedDays = computed(() => Number(stats.value?.range?.days || timelineSeries.value.length || 0));
 
 const averageDailyVisits = computed(() => {
-  if (!totalVisits90d.value) return 0;
-  return Math.round((totalVisits90d.value / 90) * 10) / 10;
+  if (!totalVisits.value || !selectedDays.value) return 0;
+  return Math.round((totalVisits.value / selectedDays.value) * 10) / 10;
 });
 
 const peakDay = computed(() => {
@@ -115,13 +267,39 @@ const peakDay = computed(() => {
   }, null);
 });
 
+const summaryCards = computed(() => [
+  {
+    key: "totalVisits",
+    label: t("stats.totalVisits"),
+    value: formatter.format(totalVisits.value),
+    meta: t("stats.visits"),
+  },
+  {
+    key: "totalVisitors",
+    label: t("stats.totalVisitors"),
+    value: formatter.format(totalVisitors.value),
+    meta: t("stats.visitors"),
+  },
+  {
+    key: "dailyAverage",
+    label: t("stats.dailyAverage"),
+    value: averageDailyVisits.value ? decimalFormatter.format(averageDailyVisits.value) : "0",
+    meta: t("stats.visits"),
+  },
+  {
+    key: "peakDay",
+    label: t("stats.peakDay"),
+    value: peakDay.value ? peakDay.value.fullLabel : "-", // t("stats.peakDayEmpty"),
+    meta: peakDay.value ? `${formatter.format(peakDay.value.visits)} ${t("stats.visits")}` : t("stats.timelineEmpty"),
+  },
+]);
+
 const featuredBreakdownSections = computed(() => [
   {
     key: "countries",
     title: t("stats.countries"),
     subtitle: t("stats.geoReach"),
     accentClass: "from-sky-500/12 via-cyan-500/8 to-transparent",
-    heroSurfaceClass: "border-sky-200/70 bg-[linear-gradient(145deg,rgba(240,249,255,0.96),rgba(224,242,254,0.88))]",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#0ea5e9)]",
     items: stats.value?.countries || [],
   },
@@ -130,7 +308,6 @@ const featuredBreakdownSections = computed(() => [
     title: t("stats.referrers"),
     subtitle: t("stats.sourceHealth"),
     accentClass: "from-emerald-500/12 via-teal-500/8 to-transparent",
-    heroSurfaceClass: "border-emerald-200/70 bg-[linear-gradient(145deg,rgba(236,253,245,0.96),rgba(209,250,229,0.88))]",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#10b981)]",
     items: stats.value?.referrers || [],
   },
@@ -139,7 +316,6 @@ const featuredBreakdownSections = computed(() => [
     title: t("stats.devices"),
     subtitle: t("stats.deviceMix"),
     accentClass: "from-slate-500/12 via-slate-400/8 to-transparent",
-    heroSurfaceClass: "border-slate-200/70 bg-[linear-gradient(145deg,rgba(248,250,252,0.96),rgba(226,232,240,0.88))]",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#475569)]",
     items: stats.value?.devices || [],
   },
@@ -151,11 +327,6 @@ const getBreakdownShare = (items, value) => {
   const total = getBreakdownTotal(items);
   if (!total) return 0;
   return Number(value || 0) / total;
-};
-
-const getBreakdownCoverage = (items) => {
-  if (!totalVisits90d.value) return 0;
-  return getBreakdownTotal(items) / totalVisits90d.value;
 };
 
 const getBreakdownWidth = (items, value) => {
@@ -181,24 +352,6 @@ const getCountryName = (value) => {
   }
 };
 
-const getReferrerBadge = (value) => {
-  if (!value || value === "direct" || value === "unknown") {
-    return "IN";
-  }
-
-  const host = String(value).replace(/^www\./, "");
-  const segment = host.split(".")[0] || host;
-  return segment.slice(0, 2).toUpperCase();
-};
-
-const getDeviceBadge = (value) => {
-  if (value === "mobile") return "MB";
-  if (value === "tablet") return "TB";
-  if (value === "bot") return "BOT";
-  if (value === "desktop") return "PC";
-  return "--";
-};
-
 const getBreakdownLabel = (type, value) => {
   if (!value) {
     return t("stats.unknown");
@@ -216,8 +369,8 @@ const getBreakdownLabel = (type, value) => {
     return getCountryName(value);
   }
 
-  const modeKey = `stats.deviceLabels.${value}`;
   if (type === "devices") {
+    const modeKey = `stats.deviceLabels.${value}`;
     const translated = t(modeKey);
     return translated === modeKey ? value : translated;
   }
@@ -225,25 +378,35 @@ const getBreakdownLabel = (type, value) => {
   return value;
 };
 
-const getBreakdownBadge = (type, value) => {
-  if (type === "countries") {
-    return getCountryCode(value) || "--";
-  }
-
-  if (type === "referrers") {
-    return getReferrerBadge(value);
-  }
-
-  return "--";
-};
-
 const formatShare = (value, precise = false) => {
   return precise ? precisePercentFormatter.format(value || 0) : percentFormatter.format(value || 0);
 };
 
-const loadStats = async () => {
-  if (!props.visible || !props.item?.slug) return;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
 
+const geoPoints = computed(() => {
+  const points = stats.value?.geoPoints || [];
+  const maxVisits = Math.max(...points.map((point) => Number(point.visits || 0)), 0);
+
+  return points.map((point) => ({
+    ...point,
+    name: getCountryName(point.label),
+    x: clamp(((Number(point.longitude) + 180) / 360) * 100, 2, 98),
+    y: clamp(((90 - Number(point.latitude)) / 180) * 52, 2, 50),
+    radius: maxVisits > 0 ? 1.8 + (Number(point.visits || 0) / maxVisits) * 3.8 : 1.8,
+    share: formatShare(totalVisits.value ? Number(point.visits || 0) / totalVisits.value : 0, true),
+  }));
+});
+
+const geoLegend = computed(() => geoPoints.value.slice(0, 4));
+const hasTimelineData = computed(() => timelineSeries.value.some((point) => point.visits > 0));
+const timelineMinWidth = computed(() => `${Math.max(timelineSeries.value.length * 10, 320)}px`);
+
+const loadStats = async () => {
+  if (!props.visible || !props.item?.slug || !requestPayload.value) return;
+
+  const currentRequest = requestSequence.value + 1;
+  requestSequence.value = currentRequest;
   loading.value = true;
   error.value = "";
 
@@ -251,7 +414,10 @@ const loadStats = async () => {
     const response = await fetch(`/api/?action=stats`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slug: props.item.slug }),
+      body: JSON.stringify({
+        slug: props.item.slug,
+        ...requestPayload.value,
+      }),
     });
     const result = await response.json();
 
@@ -259,22 +425,38 @@ const loadStats = async () => {
       throw new Error(result.msg || t("stats.failed"));
     }
 
+    if (currentRequest !== requestSequence.value) {
+      return;
+    }
+
     stats.value = result.data;
   } catch (requestError) {
+    if (currentRequest !== requestSequence.value) {
+      return;
+    }
+
     console.error("Failed to load analytics stats:", requestError);
     stats.value = null;
     error.value = requestError.message || t("stats.failed");
   } finally {
-    loading.value = false;
+    if (currentRequest === requestSequence.value) {
+      loading.value = false;
+    }
   }
 };
 
 watch(
-  () => [props.visible, props.item?.slug],
+  () => [props.visible, props.item?.slug, requestFingerprint.value],
   ([visible, slug]) => {
-    if (visible && slug) {
-      loadStats();
+    if (!visible || !slug) return;
+
+    if (!requestPayload.value) {
+      loading.value = false;
+      error.value = "";
+      return;
     }
+
+    loadStats();
   },
   { immediate: true }
 );
@@ -282,156 +464,193 @@ watch(
 
 <template>
   <Dialog :open="visible" @update:open="closeDialog">
-    <DialogContent class="w-[96%] max-w-6xl max-h-[90vh] overflow-y-auto shadow-lg !rounded-2xl bg-white/60">
+    <DialogContent class="w-[96%] max-w-7xl bg-white/70 shadow-lg backdrop-blur-sm !rounded-md">
       <DialogHeader class="space-y-3 text-left">
         <div class="flex items-start justify-between gap-4">
-          <div class="space-y-2">
+          <div class="min-w-0 flex-1 space-y-2">
             <div class="space-y-1">
-              <DialogTitle class="text-2xl tracking-tight text-slate-900">{{ title }}</DialogTitle>
-              <DialogDescription>
-                <div class="flex flex-wrap items-center gap-1 text-xs text-slate-500">
-                  <span class="rounded bg-slate-100 px-2 py-0.5">{{ getModeLabel(item?.mode) }}</span>
-                  <span class="rounded bg-slate-100 px-2 py-0.5">{{ shortUrl }}</span>
-                </div>
-              </DialogDescription>
+              <DialogTitle class="text-2xl tracking-tight text-slate-900">
+                {{ title }}
+                <span class="rounded bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                  {{ getModeLabel(item?.mode) }}
+                </span>
+              </DialogTitle>
+              <!-- <DialogDescription class="space-y-3">
+                <p class="text-sm text-slate-500">{{ t("stats.description") }}</p>
+                <p v-if="rangeValidationError" class="text-xs text-amber-700">
+                  {{ rangeValidationError }}
+                </p>
+              </DialogDescription> -->
             </div>
           </div>
 
-          <!-- <Button type="button" variant="ghost" size="icon" class="rounded-full" @click="closeDialog(false)">
-            <i class="icon-[material-symbols--close-rounded] h-5 w-5" />
-            <span class="sr-only">{{ t("common.close") }}</span>
-          </Button> -->
-          <Button class="w-6 h-6 p-0 !my-0 ml-auto" variant="ghost" size="icon" @click="closeDialog(false)">
+          <Button class="ml-auto h-6 w-6 p-0 !my-0" variant="ghost" size="icon" @click="closeDialog(false)">
             <i class="icon-[material-symbols--close] h-4 w-4" />
           </Button>
         </div>
       </DialogHeader>
+      <div class="max-h-[80vh] overflow-y-auto space-y-6 p-1 -m-1">
+        <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <div class="w-full grid gap-3 md:grid-cols-4">
+            <div class="w-full col-span-2 md:col-span-1">
+              <div class="mb-1 text-xs uppercase text-slate-400">{{ t("stats.range") }}</div>
+              <Select :model-value="rangePreset" @update:model-value="handleRangePresetChange">
+                <SelectTrigger class="rounded-md bg-white/80">
+                  <SelectValue :placeholder="t('stats.range')" />
+                </SelectTrigger>
+                <SelectContent class="rounded-md p-1">
+                  <SelectItem v-for="option in rangeOptions" :key="option.value" :value="option.value"
+                    class="cursor-pointer rounded-md">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
+            <div class="grid gap-3 grid-cols-2 col-span-2">
+              <div class="w-full">
+                <div class="mb-1 text-xs uppercase text-slate-400">{{ t("stats.startDate") }}
+                </div>
+                <DatePicker :model-value="customStartDate" :placeholder="t('stats.startDate')"
+                  class-name="rounded-md bg-white/80" @update:model-value="handleCustomStartChange" />
+              </div>
 
-      <div class="max-h-[60vh] space-y-6 overflow-y-auto">
-        <div v-if="loading" class="flex min-h-[320px] items-center justify-center text-slate-500">
-          <div class="flex items-center gap-2">
-            <i class="icon-[material-symbols--progress-activity] animate-spin text-lg" />
-            <span>{{ t("stats.loading") }}</span>
+              <div class="w-full">
+                <div class="mb-1 text-xs uppercase text-slate-400">{{ t("stats.endDate") }}
+                </div>
+                <DatePicker :model-value="customEndDate" :placeholder="t('stats.endDate')"
+                  class-name="rounded-md bg-white/80" @update:model-value="handleCustomEndChange" />
+              </div>
+            </div>
           </div>
         </div>
-
-        <div v-else-if="error" class="py-[20%] text-center text-amber-700">
-          {{ error }}
-        </div>
-
-        <div v-else-if="stats && stats.enabled === false" class="py-[20%] text-center text-slate-400">
-          {{ t("stats.unavailable") }}
-        </div>
-
-        <template v-else>
-          <div class="grid gap-3 grid-cols-2 md:grid-cols-4">
-            <div v-for="card in summaryCards" :key="card.key" class="rounded-md border px-4 py-3 shadow-sm">
-              <div class="text-xs uppercase text-slate-400">{{ card.label }}</div>
-              <div class="mt-3 text-3xl font-semibold tracking-tight text-slate-900">
-                {{ formatter.format(card.value) }}
-              </div>
-              <div class="mt-2 text-xs text-slate-500">{{ t("stats.visits") }}</div>
+        <div class="space-y-6">
+          <div v-if="loading" class="flex min-h-[320px] items-center justify-center text-slate-500">
+            <div class="flex items-center gap-2">
+              <i class="icon-[material-symbols--progress-activity] animate-spin text-lg" />
+              <span>{{ t("stats.loading") }}</span>
             </div>
           </div>
 
-          <section>
-            <div class="flex flex-col gap-2">
-              <div>
-                <h3 class="text-base font-semibold text-slate-900">{{ t("stats.trend90d") }}</h3>
-                <!-- <p class="text-sm text-slate-500">{{ t("stats.rankedByVisits") }}</p> -->
+          <div v-else-if="rangeValidationError" class="py-[18%] text-center text-amber-700">
+            {{ rangeValidationError }}
+          </div>
+
+          <div v-else-if="error" class="py-[18%] text-center text-amber-700">
+            {{ error }}
+          </div>
+
+          <div v-else-if="stats && stats.enabled === false" class="py-[18%] text-center text-slate-400">
+            {{ t("stats.unavailable") }}
+          </div>
+
+          <template v-else>
+            <div class="grid gap-3 grid-cols-2 xl:grid-cols-4">
+              <div v-for="card in summaryCards" :key="card.key"
+                class="rounded-md border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm">
+                <div class="text-xs uppercase tracking-[0.16em] text-slate-400">{{ card.label }}</div>
+                <div class="mt-2 break-words text-xl font-semibold tracking-tight text-slate-900">
+                  {{ card.value }}
+                </div>
+                <div class="mt-2 text-xs text-slate-500">{{ card.meta }}</div>
               </div>
+            </div>
 
-              <div class="grid gap-3 sm:grid-cols-3">
-                <div class="grid gap-3 sm:grid-rows-2">
-                  <div class="rounded-md border px-4 py-3">
-                    <div class="text-xs uppercase text-slate-400">{{ t("stats.dailyAverage") }}
-                    </div>
-                    <div class="mt-2 text-xl font-semibold text-slate-900">
-                      {{ averageDailyVisits ? compactFormatter.format(averageDailyVisits) : 0 }}
-                    </div>
-                    <div class="text-sm text-slate-500">{{ t("stats.visits") }}</div>
-                  </div>
-
-                  <div class="rounded-md border px-4 py-3">
-                    <div class="text-xs uppercase text-slate-400">{{ t("stats.peakDay") }}</div>
-                    <div class="mt-2 text-xl font-semibold text-slate-900">
-                      {{ peakDay ? peakDay.label : t("stats.peakDayEmpty") }}
-                    </div>
-                    <div class="text-sm text-slate-500">
-                      {{ peakDay ? `${formatter.format(peakDay.visits)} ${t("stats.visits")}` :
-                        t("stats.timelineEmpty") }}
-                    </div>
-                  </div>
+            <div class="grid md:grid-cols-2 gap-3">
+              <section class="space-y-2">
+                <div class="flex flex-col gap-1">
+                  <h3 class="text-base font-semibold text-slate-900">{{ t("stats.location") }}</h3>
+                  <!-- <p class="text-sm text-slate-500">{{ rangeSummary }}</p> -->
+                </div>
+                <div class="h-60 rounded-md border border-slate-200/80 bg-white/80 shadow-sm">
+                  <svg viewBox="0 0 100 52" class="h-full w-full">
+                    <path v-for="shape in worldMapShapes" :key="shape" :d="shape" fill="#cbd5e1" fill-opacity="0.46"
+                      stroke="#94a3b8" stroke-opacity="0.28" stroke-width="0.5" />
+                    <g v-for="point in geoPoints" :key="`${point.label}-${point.latitude}-${point.longitude}`">
+                      <circle :cx="point.x" :cy="point.y" :r="point.radius + 1.4" fill="rgba(14,165,233,0.16)" />
+                      <circle :cx="point.x" :cy="point.y" :r="point.radius" fill="#0284c7" fill-opacity="0.9"
+                        stroke="#f8fafc" stroke-width="0.7" />
+                      <title>{{ `${point.name}: ${formatter.format(point.visits)} ${t("stats.visits")}` }}</title>
+                    </g>
+                  </svg>
+                </div>
+              </section>
+              <section class="space-y-2">
+                <div class="flex flex-col gap-1">
+                  <h3 class="text-base font-semibold text-slate-900">{{ t("stats.trend") }}</h3>
+                  <!-- <p class="text-sm text-slate-500">{{ rangeSummary }}</p> -->
                 </div>
 
-                <div v-if="stats?.summary?.last90d" class="rounded-md border px-4 py-3 sm:col-span-2">
-                  <div class="flex h-40 items-end gap-[1px]">
-                    <div v-for="point in timelineSeries" :key="point.key" class="group flex h-full flex-1 items-end"
+                <div v-if="hasTimelineData"
+                  class="h-60 rounded-md border border-slate-200/80 bg-white/80 shadow-sm flex flex-col p-3">
+                  <div class="flex h-full items-end gap-[1px]">
+                    <div v-for="point in timelineSeries" :key="point.key"
+                      class="group flex h-full flex-1 items-end hover:bg-slate-50"
                       :title="`${point.label}: ${formatter.format(point.visits)} ${t('stats.visits')}`">
                       <div class="w-full bg-black transition-opacity group-hover:opacity-50"
                         :style="{ height: `${point.height}%` }" />
                     </div>
                   </div>
-                  <div class="mt-3 flex justify-between text-[11px] text-slate-400">
+                  <div class="mt-1 flex justify-between text-[11px] text-slate-400">
                     <span>{{ timelineSeries[0]?.label }}</span>
                     <span>{{ timelineSeries[Math.floor(timelineSeries.length / 2)]?.label }}</span>
                     <span>{{ timelineSeries[timelineSeries.length - 1]?.label }}</span>
                   </div>
                 </div>
+
                 <div v-else
-                  class="rounded-md border text-slate-500 flex items-center justify-center text-sm sm:col-span-2">
+                  class="flex h-60 items-center justify-center rounded-md border border-slate-200/80 bg-white/80 text-sm text-slate-500 shadow-sm">
                   {{ t("stats.timelineEmpty") }}
                 </div>
-              </div>
+              </section>
             </div>
-          </section>
 
-          <div class="grid gap-3 md:grid-cols-3">
-            <section v-for="section in featuredBreakdownSections" :key="section.key"
-              class="overflow-hidden rounded-md border shadow-sm">
-              <div class="relative border-b px-4 py-3">
-                <div class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100"
-                  :class="section.accentClass" />
-                <div class="relative flex items-start justify-between gap-4">
-                  <h3 class="text-base font-semibold text-slate-900">{{ section.title }}</h3>
-                  <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase text-slate-500">
-                    {{ section.subtitle }}
-                  </span>
+            <div class="grid gap-3 md:grid-cols-3">
+              <section v-for="section in featuredBreakdownSections" :key="section.key"
+                class="overflow-hidden rounded-md border shadow-sm">
+                <div class="relative border-b px-4 py-3">
+                  <div class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100"
+                    :class="section.accentClass" />
+                  <div class="relative flex items-start justify-between gap-4">
+                    <h3 class="text-base font-semibold text-slate-900">{{ section.title }}</h3>
+                    <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase text-slate-500">
+                      {{ section.subtitle }}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              <div v-if="section.items.length" class="space-y-1 px-4 py-4 sm:px-5">
-                <div v-for="entry in section.items" :key="`${section.key}-${entry.label}`" class="min-w-0 flex-1">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="w-full min-w-0">
-                      <span class="truncate text-sm font-medium text-slate-900">
-                        {{ getBreakdownLabel(section.key, entry.label) }}
-                      </span>
+                <div v-if="section.items.length" class="space-y-1 px-4 py-4 sm:px-5">
+                  <div v-for="entry in section.items" :key="`${section.key}-${entry.label}`" class="min-w-0 flex-1">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="w-full min-w-0">
+                        <span class="truncate text-sm font-medium text-slate-900">
+                          {{ getBreakdownLabel(section.key, entry.label) }}
+                        </span>
 
-                      <div class="h-2 overflow-hidden bg-white">
-                        <div class="h-full" :class="section.meterClass"
-                          :style="{ width: getBreakdownWidth(section.items, entry.visits) }" />
+                        <div class="h-2 p-[1px] overflow-hidden bg-white">
+                          <div class="h-full" :class="section.meterClass"
+                            :style="{ width: getBreakdownWidth(section.items, entry.visits) }" />
+                        </div>
                       </div>
-                    </div>
 
-                    <div class="shrink-0 text-right">
-                      <div class="text-sm font-semibold text-slate-900">{{ formatter.format(entry.visits) }}
-                      </div>
-                      <div class="text-[11px] text-slate-400">
-                        {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
+                      <div class="shrink-0 text-right">
+                        <div class="text-sm font-semibold text-slate-900">{{ formatter.format(entry.visits) }}
+                        </div>
+                        <div class="text-[11px] text-slate-400">
+                          {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
 
-              <div v-else class="px-4 py-8 text-center text-sm text-slate-500 sm:px-5">
-                {{ t("stats.noBreakdown") }}
-              </div>
-            </section>
-          </div>
-        </template>
+                <div v-else class="px-4 py-8 text-center text-sm text-slate-500 sm:px-5">
+                  {{ t("stats.noBreakdown") }}
+                </div>
+              </section>
+            </div>
+          </template>
+        </div>
       </div>
     </DialogContent>
   </Dialog>

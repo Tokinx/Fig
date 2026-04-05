@@ -40,6 +40,21 @@ export default class ControllerAPI {
     return this.createResponse(0, msg, data);
   }
 
+  appendVisitorCookie(response) {
+    const cookie = this.analytics?.getVisitorCookieHeader?.();
+    if (!cookie) {
+      return response;
+    }
+
+    const headers = new Headers(response.headers);
+    headers.append("Set-Cookie", cookie);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+
   createCookieResponse(code, msg, data, cookieName, cookieValue, expires = null) {
     const cookieString = expires
       ? `${cookieName}=${cookieValue}; path=/; expires=${new Date(expires).toUTCString()}`
@@ -186,7 +201,7 @@ export default class ControllerAPI {
 
   async stats() {
     const { request } = this.utils;
-    const { slug } = await GetReqJson(request);
+    const { slug, preset, startDate, endDate } = await GetReqJson(request);
 
     if (!slug) {
       return this.createErrorResponse(1080, "Slug is required.");
@@ -198,19 +213,24 @@ export default class ControllerAPI {
     }
 
     try {
-      const data = await this.analytics?.getStats(slug);
+      const data = await this.analytics?.getStats(slug, { preset, startDate, endDate });
       return this.createSuccessResponse(
         data || {
           enabled: false,
-          summary: { last24h: 0, last7d: 0, last30d: 0, last90d: 0 },
+          range: { preset: preset || "30d", startDate: "", endDate: "", days: 0 },
+          summary: { totalVisits: 0, totalVisitors: 0 },
           timeline: [],
           countries: [],
           referrers: [],
           devices: [],
+          geoPoints: [],
         },
       );
     } catch (error) {
       console.error("Failed to query analytics stats:", error);
+      if (error.message === "Invalid custom date range.") {
+        return this.createErrorResponse(1082, error.message, 400);
+      }
       return this.createErrorResponse(1082, "Failed to load analytics stats.", 500);
     }
   }
@@ -246,11 +266,13 @@ export default class ControllerAPI {
     this.analytics?.writeVisit({ slug, mode: obj.mode || "redirect" });
 
     // If no passcode required or passcode matches, return success with URL data
-    return this.createSuccessResponse({
-      url: obj.url,
-      mode: obj.mode || "redirect",
-      // notes: obj.notes || ''
-    });
+    return this.appendVisitorCookie(
+      this.createSuccessResponse({
+        url: obj.url,
+        mode: obj.mode || "redirect",
+        // notes: obj.notes || ''
+      }),
+    );
   }
 }
 

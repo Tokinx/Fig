@@ -154,6 +154,21 @@ async function handleProxyRequest(c, targetUrl, slug = null) {
   });
 }
 
+function appendVisitorCookie(response, analytics) {
+  const cookie = analytics?.getVisitorCookieHeader?.();
+  if (!cookie) {
+    return response;
+  }
+
+  const headers = new Headers(response.headers);
+  headers.append("Set-Cookie", cookie);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 // Helper function to handle short URL requests
 async function handleShortUrl(c, slug, additionalPath = "") {
   const utils = c.get("utils");
@@ -179,12 +194,15 @@ async function handleShortUrl(c, slug, additionalPath = "") {
     analytics?.writeVisit({ slug, mode });
   }
 
+  let response;
   switch (mode) {
     case "redirect":
-      return c.redirect(targetUrl, 302);
+      response = c.redirect(targetUrl, 302);
+      break;
 
     case "proxy":
-      return await handleProxyRequest(c, targetUrl, additionalPath ? slug : null);
+      response = await handleProxyRequest(c, targetUrl, additionalPath ? slug : null);
+      break;
 
     case "remind":
     case "cloaking":
@@ -193,11 +211,15 @@ async function handleShortUrl(c, slug, additionalPath = "") {
         targetUrl,
         notes: short.notes,
       });
-      return await serveAppShell(c, { dynamicScript });
+      response = await serveAppShell(c, { dynamicScript });
+      break;
 
     default:
-      return c.redirect(targetUrl, 302);
+      response = c.redirect(targetUrl, 302);
+      break;
   }
+
+  return appendVisitorCookie(response, analytics);
 }
 
 function shouldServeFrontendAsset(pathname) {

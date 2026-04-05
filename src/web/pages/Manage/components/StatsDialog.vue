@@ -134,14 +134,16 @@ const featuredBreakdownSections = computed(() => [
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#10b981)]",
     items: stats.value?.referrers || [],
   },
+  {
+    key: "devices",
+    title: t("stats.devices"),
+    subtitle: t("stats.deviceMix"),
+    accentClass: "from-slate-500/12 via-slate-400/8 to-transparent",
+    heroSurfaceClass: "border-slate-200/70 bg-[linear-gradient(145deg,rgba(248,250,252,0.96),rgba(226,232,240,0.88))]",
+    meterClass: "bg-[linear-gradient(90deg,#0f172a,#475569)]",
+    items: stats.value?.devices || [],
+  },
 ]);
-
-const deviceSection = computed(() => ({
-  key: "devices",
-  title: t("stats.devices"),
-  subtitle: t("stats.deviceMix"),
-  items: stats.value?.devices || [],
-}));
 
 const getBreakdownTotal = (items = []) => items.reduce((sum, item) => sum + Number(item.visits || 0), 0);
 
@@ -280,16 +282,16 @@ watch(
 
 <template>
   <Dialog :open="visible" @update:open="closeDialog">
-    <DialogContent class="w-[96%] max-w-5xl max-h-[90vh] overflow-y-auto shadow-lg !rounded-2xl bg-white/60">
+    <DialogContent class="w-[96%] max-w-6xl max-h-[90vh] overflow-y-auto shadow-lg !rounded-2xl bg-white/60">
       <DialogHeader class="space-y-3 text-left">
         <div class="flex items-start justify-between gap-4">
           <div class="space-y-2">
             <div class="space-y-1">
               <DialogTitle class="text-2xl tracking-tight text-slate-900">{{ title }}</DialogTitle>
               <DialogDescription>
-                <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                  <span class="rounded-full bg-slate-100 px-3 py-1">{{ getModeLabel(item?.mode) }}</span>
-                  <span class="rounded-full bg-slate-100 px-3 py-1">{{ shortUrl }}</span>
+                <div class="flex flex-wrap items-center gap-1 text-xs text-slate-500">
+                  <span class="rounded bg-slate-100 px-2 py-0.5">{{ getModeLabel(item?.mode) }}</span>
+                  <span class="rounded bg-slate-100 px-2 py-0.5">{{ shortUrl }}</span>
                 </div>
               </DialogDescription>
             </div>
@@ -314,13 +316,11 @@ watch(
           </div>
         </div>
 
-        <div v-else-if="error"
-          class="rounded-3xl border border-amber-200 bg-amber-50 px-5 py-8 text-center text-amber-700">
+        <div v-else-if="error" class="py-[20%] text-center text-amber-700">
           {{ error }}
         </div>
 
-        <div v-else-if="stats && stats.enabled === false"
-          class="rounded-3xl border border-slate-200 bg-slate-50 px-5 py-8 text-center text-slate-600">
+        <div v-else-if="stats && stats.enabled === false" class="py-[20%] text-center text-slate-400">
           {{ t("stats.unavailable") }}
         </div>
 
@@ -420,48 +420,6 @@ watch(
                       </div>
                       <div class="text-[11px] text-slate-400">
                         {{ formatShare(getBreakdownShare(section.items, entry.visits), true) }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-else class="px-4 py-8 text-center text-sm text-slate-500 sm:px-5">
-                {{ t("stats.noBreakdown") }}
-              </div>
-            </section>
-
-            <section class="overflow-hidden rounded-md border shadow-sm">
-              <div class="border-b px-4 py-3">
-                <div class="flex items-start justify-between gap-4">
-                  <h3 class="text-base font-semibold text-slate-900">{{ deviceSection.title }}</h3>
-                  <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase text-slate-500">
-                    {{ deviceSection.subtitle }}
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="deviceSection.items.length" class="space-y-1 px-4 py-4 sm:px-5">
-                <div v-for="entry in deviceSection.items" :key="`devices-${entry.label}`" class="min-w-0 flex-1">
-                  <div class="flex items-start justify-between gap-3">
-                    <div class="w-full min-w-0">
-                      <span class="truncate text-sm font-medium text-slate-900">
-                        {{ getBreakdownLabel(deviceSection.key, entry.label) }}
-                      </span>
-
-                      <div class="h-2 overflow-hidden bg-white">
-                        <div class="h-full bg-slate-600"
-                          :style="{ width: getBreakdownWidth(deviceSection.items, entry.visits) }" />
-                      </div>
-                    </div>
-
-                    <div class="shrink-0 text-right">
-                      <div class="text-sm font-semibold text-slate-900">
-                        {{ formatter.format(entry.visits) }}
-                      </div>
-                      <div class="text-[11px] text-slate-400">
-                        {{ t("stats.share") }} {{ formatShare(getBreakdownShare(deviceSection.items, entry.visits),
-                          true) }}
                       </div>
                     </div>
                   </div>

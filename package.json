@@ -17,6 +17,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "echarts": "^6.0.0",
     "hono": "^4.8.9",
     "qrcode": "^1.5.4",
     "radix-vue": "^1.2.6",
@@ -24,6 +25,7 @@
     "tailwindcss-animate": "^1.0.7",
     "v-calendar": "next",
     "vue": "^3.3.11",
+    "vue-echarts": "^8.0.1",
     "vue-i18n": "11",
     "vue-router": "4",
     "vue3-clipboard": "^1.0.0"

@@ -1,7 +1,15 @@
 <script setup>
-import { computed, ref, onMounted, onUnmounted } from "vue";
-import worldMapRaw from "@/assets/world-map-new.svg?raw";
+import { computed, ref, onMounted } from "vue";
+import { use } from "echarts/core";
+import { MapChart } from "echarts/charts";
+import { VisualMapComponent, TooltipComponent } from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import VChart from "vue-echarts";
 import { useI18n } from "vue-i18n";
+import * as echarts from "echarts/core";
+
+// 注册 ECharts 组件
+use([MapChart, VisualMapComponent, TooltipComponent, CanvasRenderer]);
 
 const props = defineProps({
   countries: {
@@ -11,28 +19,9 @@ const props = defineProps({
 });
 
 const { t, locale } = useI18n();
-const mapContainer = ref(null);
-const mapContent = ref(null);
-const scale = ref(1);
-const position = ref({ x: 0, y: 0 });
-const isDragging = ref(false);
-const dragStart = ref({ x: 0, y: 0 });
-const hoveredCountry = ref(null);
-const hoveredPosition = ref({ x: 0, y: 0 });
-const isInitialized = ref(false);
-
-const MIN_SCALE = 0.5;
-const MAX_SCALE = 5;
+const mapReady = ref(false);
 
 const maxVisits = computed(() => Math.max(...props.countries.map((c) => Number(c.visits || 0)), 0));
-
-const countryMap = computed(() => {
-  const map = {};
-  for (const c of props.countries) {
-    if (c.label) map[c.label.toUpperCase()] = { visits: Number(c.visits || 0), label: c.label };
-  }
-  return map;
-});
 
 const regionNames = computed(() => {
   if (typeof Intl.DisplayNames !== "function") return null;
@@ -62,149 +51,124 @@ const topCountries = computed(() => {
 
 const formatter = new Intl.NumberFormat();
 
-const svgContent = computed(() => {
-  if (!maxVisits.value) return worldMapRaw;
+// ISO alpha-2 代码到 ECharts 国家名称的映射
+const isoToEchartsName = (isoCode) => {
+  const code = String(isoCode || "").toUpperCase();
 
-  return worldMapRaw.replace(/<path([^>]*?)id="([A-Z]{2})"([^>]*?)>/g, (match, before, code, after) => {
-    const data = countryMap.value[code];
-    if (!data || !data.visits) return match;
-
-    const intensity = Math.max(0.15, data.visits / maxVisits.value);
-    const opacity = (0.2 + intensity * 0.8).toFixed(2);
-    const fill = `fill="rgba(2,132,199,${opacity})"`;
-    const style = `style="cursor:pointer;transition:fill 0.2s"`;
-    const dataAttr = `data-visits="${data.visits}"`;
-
-    let result = match;
-    if (/fill="[^"]*"/.test(result)) {
-      result = result.replace(/fill="[^"]*"/, fill);
-    } else {
-      result = result.replace(/>$/, ` ${fill}>`);
-    }
-
-    if (!/style=/.test(result)) {
-      result = result.replace(/>$/, ` ${style}>`);
-    }
-
-    if (!/data-visits=/.test(result)) {
-      result = result.replace(/>$/, ` ${dataAttr}>`);
-    }
-
-    return result;
-  });
-});
-
-const handleZoomIn = () => {
-  scale.value = Math.min(scale.value * 1.3, MAX_SCALE);
-};
-
-const handleZoomOut = () => {
-  scale.value = Math.max(scale.value / 1.3, MIN_SCALE);
-};
-
-const handleWheel = (e) => {
-  e.preventDefault();
-  const delta = e.deltaY > 0 ? 0.9 : 1.1;
-  const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, scale.value * delta));
-
-  if (newScale !== scale.value) {
-    const rect = mapContainer.value.getBoundingClientRect();
-    const mouseX = e.clientX - rect.left;
-    const mouseY = e.clientY - rect.top;
-
-    const scaleRatio = newScale / scale.value;
-    position.value.x = mouseX - (mouseX - position.value.x) * scaleRatio;
-    position.value.y = mouseY - (mouseY - position.value.y) * scaleRatio;
-
-    scale.value = newScale;
-  }
-};
-
-const handleMouseDown = (e) => {
-  if (e.target.tagName === "path" && e.target.dataset.visits) return;
-
-  isDragging.value = true;
-  dragStart.value = {
-    x: e.clientX - position.value.x,
-    y: e.clientY - position.value.y,
-  };
-  e.preventDefault();
-};
-
-const handleMouseMove = (e) => {
-  const target = e.target;
-
-  if (isDragging.value) {
-    position.value = {
-      x: e.clientX - dragStart.value.x,
-      y: e.clientY - dragStart.value.y,
-    };
-    hoveredCountry.value = null;
-  } else if (target.tagName === "path" && target.id && /^[A-Z]{2}$/.test(target.id)) {
-    const code = target.id;
-    const visits = target.dataset.visits;
-
-    if (visits && Number(visits) >= 1) {
-      hoveredCountry.value = {
-        code,
-        name: getCountryName(code),
-        visits: Number(visits),
-      };
-      hoveredPosition.value = { x: e.clientX, y: e.clientY };
-    } else {
-      hoveredCountry.value = null;
-    }
-  } else {
-    hoveredCountry.value = null;
-  }
-};
-
-const handleMouseUp = () => {
-  isDragging.value = false;
-};
-
-const handleMouseLeave = () => {
-  isDragging.value = false;
-  hoveredCountry.value = null;
-};
-
-const centerMap = () => {
-  if (!mapContainer.value || !mapContent.value) return;
-
-  const container = mapContainer.value;
-  const svg = mapContent.value.querySelector("svg");
-  if (!svg) return;
-
-  const containerWidth = container.clientWidth;
-  const containerHeight = container.clientHeight;
-  const svgWidth = svg.clientWidth || 1000;
-  const svgHeight = svg.clientHeight || 500;
-
-  position.value = {
-    x: (containerWidth - svgWidth) / 2,
-    y: (containerHeight - svgHeight) / 2,
+  // ECharts 使用的特殊国家名称映射
+  const specialNames = {
+    "US": "United States",
+    "GB": "United Kingdom",
+    "CN": "China",
+    "RU": "Russia",
+    "KR": "South Korea",
+    "KP": "North Korea",
+    "CD": "Dem. Rep. Congo",
+    "CG": "Congo",
+    "CF": "Central African Rep.",
+    "SS": "South Sudan",
+    "TZ": "Tanzania",
+    "DO": "Dominican Rep.",
+    "BA": "Bosnia and Herz.",
+    "GQ": "Eq. Guinea",
+    "LA": "Lao PDR",
+    "PS": "Palestine",
+    "SB": "Solomon Is.",
+    "FK": "Falkland Is.",
+    "TL": "Timor-Leste",
+    "CV": "Cabo Verde",
+    "CZ": "Czechia",
   };
 
-  isInitialized.value = true;
+  if (specialNames[code]) {
+    return specialNames[code];
+  }
+
+  // 对于其他国家，尝试使用 Intl.DisplayNames 获取英文名称
+  try {
+    const englishNames = new Intl.DisplayNames(["en"], { type: "region" });
+    return englishNames.of(code) || code;
+  } catch {
+    return code;
+  }
 };
 
-onMounted(() => {
-  if (mapContainer.value) {
-    mapContainer.value.addEventListener("wheel", handleWheel, { passive: false });
-    document.addEventListener("mousemove", handleMouseMove);
-    document.addEventListener("mouseup", handleMouseUp);
-
-    // 等待 SVG 渲染后居中
-    setTimeout(centerMap, 100);
-  }
+// 转换数据为 ECharts 格式
+const mapData = computed(() => {
+  return props.countries
+    .filter((c) => c.label && Number(c.visits || 0) > 0)
+    .map((c) => ({
+      name: isoToEchartsName(c.label),
+      value: Number(c.visits || 0),
+    }));
 });
 
-onUnmounted(() => {
-  if (mapContainer.value) {
-    mapContainer.value.removeEventListener("wheel", handleWheel);
+// ECharts 配置
+const option = computed(() => ({
+  tooltip: {
+    trigger: "item",
+    formatter: (params) => {
+      if (!params.value) return "";
+      const countryName = getCountryName(params.name);
+      return `<strong>${countryName}</strong><br/>${formatter.format(params.value)} ${t("stats.visits")}`;
+    },
+    backgroundColor: "rgba(255, 255, 255, 0.95)",
+    borderColor: "#e2e8f0",
+    borderWidth: 1,
+    textStyle: {
+      color: "#0f172a",
+      fontSize: 12,
+    },
+    padding: [8, 12],
+  },
+  visualMap: {
+    show: false,
+    min: 0,
+    max: maxVisits.value || 100,
+    inRange: {
+      color: ["#e0f2fe", "#0284c7", "#0369a1"],
+    },
+    calculable: false,
+  },
+  series: [
+    {
+      type: "map",
+      map: "world",
+      roam: true,
+      scaleLimit: {
+        min: 0.5,
+        max: 5,
+      },
+      emphasis: {
+        label: {
+          show: false,
+        },
+        itemStyle: {
+          areaColor: "#0284c7",
+          borderColor: "#0369a1",
+          borderWidth: 1,
+        },
+      },
+      itemStyle: {
+        areaColor: "#cbd5e1",
+        borderColor: "#94a3b8",
+        borderWidth: 0.5,
+      },
+      data: mapData.value,
+    },
+  ],
+}));
+
+// 加载并注册世界地图
+onMounted(async () => {
+  try {
+    const response = await fetch("https://fastly.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json");
+    const geoJSON = await response.json();
+    echarts.registerMap("world", geoJSON);
+    mapReady.value = true;
+  } catch (error) {
+    console.error("Failed to load world map:", error);
   }
-  document.removeEventListener("mousemove", handleMouseMove);
-  document.removeEventListener("mouseup", handleMouseUp);
 });
 </script>
 
@@ -212,7 +176,7 @@ onUnmounted(() => {
   <div class="relative h-full w-full overflow-hidden bg-slate-50/50">
     <!-- 左侧国家列表 -->
     <div class="absolute left-3 top-3 z-10 w-60 rounded-md bg-white/50 shadow-sm backdrop-blur-lg">
-      <div class="border-b border-slate-200/80 mx-3">
+      <div class="border-b border-slate-500/10 mx-3">
         <slot name="left-top"></slot>
       </div>
       <div class="max-h-64 overflow-y-auto p-2">
@@ -234,79 +198,10 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <!-- 缩放控制 -->
-    <div class="absolute right-3 top-3 z-10 flex flex-col gap-1 rounded-md bg-white/50 backdrop-blur-lg">
-      <button
-        @click="handleZoomIn"
-        class="flex h-6 w-6 items-center justify-center rounded hover:bg-white transition-colors"
-        :title="t('stats.zoomIn')"
-      >
-        <i class="icon-[material-symbols--add] text-lg text-slate-700" />
-      </button>
-      <button
-        @click="handleZoomOut"
-        class="flex h-6 w-6 items-center justify-center rounded hover:bg-white transition-colors"
-        :title="t('stats.zoomOut')"
-      >
-        <i class="icon-[material-symbols--remove] text-lg text-slate-700" />
-      </button>
+    <!-- ECharts 地图 -->
+    <div v-if="!mapReady" class="flex h-full w-full items-center justify-center text-sm text-slate-500">
+      {{ t("stats.loading") }}
     </div>
-
-    <!-- 地图容器 -->
-    <div
-      ref="mapContainer"
-      class="map-container h-full w-full overflow-hidden"
-      :style="{ cursor: isDragging ? 'grabbing' : (hoveredCountry ? 'pointer' : 'grab') }"
-      @mousedown="handleMouseDown"
-      @mouseleave="handleMouseLeave"
-    >
-      <div
-        ref="mapContent"
-        class="origin-center transition-transform duration-100"
-        :style="{
-          transform: `translate(${position.x}px, ${position.y}px) scale(${scale})`,
-          transformOrigin: '0 0',
-        }"
-        v-html="svgContent"
-      />
-    </div>
-
-    <!-- 悬停提示 -->
-    <Teleport to="body">
-      <div
-        v-if="hoveredCountry && !isDragging"
-        class="pointer-events-none fixed z-50 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-xl"
-        :style="{
-          left: `${hoveredPosition.x + 12}px`,
-          top: `${hoveredPosition.y + 12}px`,
-        }"
-      >
-        <div class="text-sm font-semibold text-slate-900">{{ hoveredCountry.name }}</div>
-        <div class="mt-0.5 text-xs text-slate-600">
-          {{ formatter.format(hoveredCountry.visits) }} {{ t("stats.visits") }}
-        </div>
-      </div>
-    </Teleport>
+    <VChart v-else class="h-full w-full" :option="option" autoresize />
   </div>
 </template>
-
-<style scoped>
-:deep(.map-container svg) {
-  width: 100%;
-  height: auto;
-  min-width: 1000px;
-  display: block;
-}
-:deep(.map-container path) {
-  fill: #cbd5e1;
-  fill-opacity: 0.46;
-  stroke: #94a3b8;
-  stroke-opacity: 0.28;
-  stroke-width: 0.5;
-}
-:deep(.map-container path:hover) {
-  stroke: #0284c7;
-  stroke-width: 1;
-  stroke-opacity: 0.8;
-}
-</style>

@@ -9,6 +9,7 @@ const RANGE_PRESET_DAYS = {
   "1d": 1,
   "7d": 7,
   "30d": 30,
+  "90d": 90,
 };
 
 function escapeSqlString(value) {
@@ -87,6 +88,27 @@ function serializeRange(range) {
 }
 
 function resolveRange({ preset, startDate, endDate } = {}) {
+  // 月份预设：m0 = 当月, m1 = 上月, m2 = 上上月, m3 = 三个月前
+  if (preset && preset.startsWith("m")) {
+    const monthOffset = parseInt(preset.slice(1), 10);
+    if (!isNaN(monthOffset) && monthOffset >= 0) {
+      const today = startOfUtcDay(new Date());
+      const targetDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() - monthOffset, 1));
+      const startAt = targetDate;
+      const endAt = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, 0)); // 月末
+      const days = Math.floor((endAt.getTime() - startAt.getTime()) / 86400000) + 1;
+
+      return {
+        preset,
+        startDate: formatDateKey(startAt),
+        endDate: formatDateKey(endAt),
+        days,
+        startAt,
+        endExclusive: addUtcDays(endAt, 1),
+      };
+    }
+  }
+
   if (preset === "custom" || startDate || endDate) {
     const parsedStart = parseDateKey(startDate);
     const parsedEnd = parseDateKey(endDate);
@@ -214,6 +236,39 @@ export default class AnalyticsService {
     return "desktop";
   }
 
+  getClientIp() {
+    return (
+      this.request?.headers?.get("cf-connecting-ip") ||
+      this.request?.headers?.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      "unknown"
+    );
+  }
+
+  getOs() {
+    const ua = this.request?.headers?.get("user-agent") || "";
+    if (/windows nt/i.test(ua)) return "Windows";
+    if (/mac os x/i.test(ua)) return "macOS";
+    if (/android/i.test(ua)) return "Android";
+    if (/iphone|ipad/i.test(ua)) return "iOS";
+    if (/linux/i.test(ua)) return "Linux";
+    return "unknown";
+  }
+
+  getLanguage() {
+    const lang = this.request?.headers?.get("accept-language") || "";
+    return lang.split(",")[0]?.split(";")[0]?.trim() || "unknown";
+  }
+
+  getBrowser() {
+    const ua = this.request?.headers?.get("user-agent") || "";
+    if (/edg\//i.test(ua)) return "Edge";
+    if (/opr\//i.test(ua)) return "Opera";
+    if (/chrome\//i.test(ua)) return "Chrome";
+    if (/safari\//i.test(ua) && !/chrome/i.test(ua)) return "Safari";
+    if (/firefox\//i.test(ua)) return "Firefox";
+    return "unknown";
+  }
+
   writeVisit({ slug, mode = "redirect", eventType = VISIT_EVENT } = {}) {
     if (!this.canWrite() || !slug) return;
 
@@ -231,6 +286,10 @@ export default class AnalyticsService {
           this.getDeviceType(),
           this.getVisitorId(),
           latitude !== null && longitude !== null ? GEO_ENABLED_FLAG : "",
+          this.getClientIp(),
+          this.getOs(),
+          this.getLanguage(),
+          this.getBrowser(),
         ],
         doubles: [latitude ?? 0, longitude ?? 0],
       });
@@ -378,10 +437,14 @@ export default class AnalyticsService {
         referrers: [],
         devices: [],
         geoPoints: [],
+        ips: [],
+        oses: [],
+        languages: [],
+        browsers: [],
       };
     }
 
-    const [totalVisits, totalVisitors, timeline, countries, referrers, devices, geoPoints] = await Promise.all([
+    const [totalVisits, totalVisitors, timeline, countries, referrers, devices, geoPoints, ips, oses, languages, browsers] = await Promise.all([
       this.queryVisitsTotal(slug, range),
       this.queryUniqueVisitors(slug, range),
       this.queryTimeline(slug, range),
@@ -389,6 +452,10 @@ export default class AnalyticsService {
       this.queryBreakdown(slug, "blob4", range),
       this.queryBreakdown(slug, "blob5", range),
       this.queryGeoPoints(slug, range),
+      this.queryBreakdown(slug, "blob8", range),
+      this.queryBreakdown(slug, "blob9", range),
+      this.queryBreakdown(slug, "blob10", range),
+      this.queryBreakdown(slug, "blob11", range),
     ]);
 
     return {
@@ -400,6 +467,10 @@ export default class AnalyticsService {
       referrers,
       devices,
       geoPoints,
+      ips,
+      oses,
+      languages,
+      browsers,
     };
   }
 }

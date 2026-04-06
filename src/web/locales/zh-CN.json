@@ -129,6 +129,7 @@
     "range1d": "1 天",
     "range7d": "7 天",
     "range30d": "30 天",
+    "range90d": "90 天",
     "rangeCustom": "自定义区间",
     "rangeSummary": "{start} - {end} · 共 {days} 天",
     "startDate": "开始日期",
@@ -143,6 +144,14 @@
     "sourceHealth": "来源分布",
     "devices": "设备类型",
     "deviceMix": "设备构成",
+    "browsers": "浏览器",
+    "browserMix": "浏览器分布",
+    "oses": "操作系统",
+    "osMix": "系统分布",
+    "languages": "语言",
+    "languageMix": "语言分布",
+    "ips": "访客 IP",
+    "ipDist": "IP 分布",
     "direct": "直接访问",
     "unknown": "未知",
     "share": "占比",
@@ -156,7 +165,9 @@
     "loading": "正在加载访问统计...",
     "unavailable": "当前环境未启用 Analytics Engine 查询。",
     "failed": "加载访问统计失败。",
-    "noBreakdown": "暂无可展示的数据"
+    "noBreakdown": "暂无可展示的数据",
+    "zoomIn": "放大",
+    "zoomOut": "缩小"
   },
   "footer": {
     "buildOn": "构建于"

@@ -129,6 +129,7 @@
     "range1d": "1 天",
     "range7d": "7 天",
     "range30d": "30 天",
+    "range90d": "90 天",
     "rangeCustom": "自訂區間",
     "rangeSummary": "{start} - {end} · 共 {days} 天",
     "startDate": "開始日期",
@@ -143,6 +144,14 @@
     "sourceHealth": "來源分布",
     "devices": "裝置類型",
     "deviceMix": "裝置構成",
+    "browsers": "瀏覽器",
+    "browserMix": "瀏覽器分布",
+    "oses": "作業系統",
+    "osMix": "系統分布",
+    "languages": "語言",
+    "languageMix": "語言分布",
+    "ips": "訪客 IP",
+    "ipDist": "IP 分布",
     "direct": "直接存取",
     "unknown": "未知",
     "share": "占比",
@@ -156,7 +165,9 @@
     "loading": "正在載入存取統計...",
     "unavailable": "目前環境尚未啟用 Analytics Engine 查詢。",
     "failed": "載入存取統計失敗。",
-    "noBreakdown": "暫無可顯示的資料"
+    "noBreakdown": "暫無可顯示的資料",
+    "zoomIn": "放大",
+    "zoomOut": "縮小"
   },
   "footer": {
     "buildOn": "建構於"

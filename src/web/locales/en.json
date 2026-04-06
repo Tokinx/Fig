@@ -129,6 +129,7 @@
     "range1d": "1 day",
     "range7d": "7 days",
     "range30d": "30 days",
+    "range90d": "90 days",
     "rangeCustom": "Custom range",
     "rangeSummary": "{start} - {end} · {days} days",
     "startDate": "Start date",
@@ -143,6 +144,14 @@
     "sourceHealth": "Source distribution",
     "devices": "Devices",
     "deviceMix": "Device mix",
+    "browsers": "Browsers",
+    "browserMix": "Browser mix",
+    "oses": "Operating Systems",
+    "osMix": "OS mix",
+    "languages": "Languages",
+    "languageMix": "Language mix",
+    "ips": "Visitor IPs",
+    "ipDist": "IP distribution",
     "direct": "Direct",
     "unknown": "Unknown",
     "share": "Share",
@@ -156,7 +165,9 @@
     "loading": "Loading analytics...",
     "unavailable": "Analytics Engine querying is not enabled in the current environment.",
     "failed": "Failed to load analytics data.",
-    "noBreakdown": "No data to display yet"
+    "noBreakdown": "No data to display yet",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out"
   },
   "footer": {
     "buildOn": "Build on"

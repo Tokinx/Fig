@@ -3,23 +3,10 @@ import { computed, ref, watch } from "vue";
 import { format } from "date-fns";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useI18n } from "vue-i18n";
-
-const worldMapShapes = [
-  "M7 12 L18 9 L28 12 L32 18 L28 24 L22 23 L20 18 L14 16 L10 19 L7 16 Z",
-  "M24 26 L28 28 L30 34 L28 42 L24 48 L21 43 L22 35 Z",
-  "M43 11 L48 10 L51 12 L50 16 L45 17 L42 14 Z",
-  "M46 18 L50 19 L54 24 L53 32 L50 39 L46 37 L44 30 L45 24 Z",
-  "M52 11 L64 10 L76 13 L86 18 L90 24 L85 28 L80 25 L72 25 L67 22 L60 23 L56 20 L52 17 Z",
-  "M80 37 L86 39 L88 44 L83 47 L78 44 Z",
-];
-
-const mapGridLines = {
-  horizontal: [13, 26, 39],
-  vertical: [16.7, 33.4, 50, 66.6, 83.3],
-};
+import WorldMap from "./WorldMap.vue";
+import PieChart from "./PieChart.vue";
 
 const props = defineProps({
   visible: {
@@ -53,10 +40,6 @@ const addLocalDays = (value, days) => {
   return date;
 };
 
-const today = startOfLocalDay(new Date());
-const customStartDate = ref(addLocalDays(today, -29));
-const customEndDate = ref(today);
-
 const formatter = new Intl.NumberFormat();
 const decimalFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 1,
@@ -81,12 +64,29 @@ const regionNames = computed(() => {
   return new Intl.DisplayNames([locale.value, "en"], { type: "region" });
 });
 
-const rangeOptions = computed(() => [
-  { value: "1d", label: t("stats.range1d") },
-  { value: "7d", label: t("stats.range7d") },
-  { value: "30d", label: t("stats.range30d") },
-  { value: "custom", label: t("stats.rangeCustom") },
-]);
+const rangeOptions = computed(() => {
+  const now = new Date();
+  const currentMonth = now.getMonth(); // 0-11
+  const currentYear = now.getFullYear();
+
+  const getMonthLabel = (offset) => {
+    const targetDate = new Date(currentYear, currentMonth - offset, 1);
+    const year = targetDate.getFullYear();
+    const month = targetDate.getMonth() + 1;
+    return `${year}/${month}`;
+  };
+
+  return [
+    { value: "1d", label: t("stats.range1d") },
+    { value: "7d", label: t("stats.range7d") },
+    { value: "30d", label: t("stats.range30d") },
+    { value: "90d", label: t("stats.range90d") },
+    { value: "m0", label: getMonthLabel(0) },
+    { value: "m1", label: getMonthLabel(1) },
+    { value: "m2", label: getMonthLabel(2) },
+    { value: "m3", label: getMonthLabel(3) },
+  ];
+});
 
 const getModeLabel = (mode) => {
   const key = `modes.${mode}`;
@@ -135,52 +135,12 @@ const handleRangePresetChange = (value) => {
   rangePreset.value = value || "30d";
 };
 
-const handleCustomStartChange = (value) => {
-  console.log("Custom start date changed:", value);
-  customStartDate.value = value ? startOfLocalDay(value) : null;
-};
-
-const handleCustomEndChange = (value) => {
-  customEndDate.value = value ? startOfLocalDay(value) : null;
-};
-
-const rangeValidationError = computed(() => {
-  if (rangePreset.value !== "custom" || !customStartDate.value || !customEndDate.value) {
-    return "";
-  }
-
-  return startOfLocalDay(customStartDate.value) > startOfLocalDay(customEndDate.value)
-    ? t("stats.customRangeInvalid")
-    : "";
-});
-
 const requestPayload = computed(() => {
-  if (rangePreset.value !== "custom") {
-    return { preset: rangePreset.value };
-  }
-
-  if (!customStartDate.value || !customEndDate.value || rangeValidationError.value) {
-    return null;
-  }
-
-  return {
-    preset: "custom",
-    startDate: formatDateKey(customStartDate.value),
-    endDate: formatDateKey(customEndDate.value),
-  };
+  return { preset: rangePreset.value };
 });
 
 const requestFingerprint = computed(() => {
-  if (requestPayload.value) {
-    return JSON.stringify(requestPayload.value);
-  }
-
-  return JSON.stringify({
-    preset: rangePreset.value,
-    startDate: customStartDate.value ? formatDateKey(customStartDate.value) : "",
-    endDate: customEndDate.value ? formatDateKey(customEndDate.value) : "",
-    invalid: true,
-  });
+  return JSON.stringify(requestPayload.value);
 });
 
 const displayedRange = computed(() => {
@@ -296,14 +256,6 @@ const summaryCards = computed(() => [
 
 const featuredBreakdownSections = computed(() => [
   {
-    key: "countries",
-    title: t("stats.countries"),
-    subtitle: t("stats.geoReach"),
-    accentClass: "from-sky-500/12 via-cyan-500/8 to-transparent",
-    meterClass: "bg-[linear-gradient(90deg,#0f172a,#0ea5e9)]",
-    items: stats.value?.countries || [],
-  },
-  {
     key: "referrers",
     title: t("stats.referrers"),
     subtitle: t("stats.sourceHealth"),
@@ -312,12 +264,28 @@ const featuredBreakdownSections = computed(() => [
     items: stats.value?.referrers || [],
   },
   {
+    key: "ips",
+    title: t("stats.ips"),
+    subtitle: t("stats.ipDist"),
+    accentClass: "from-cyan-500/12 via-teal-500/8 to-transparent",
+    meterClass: "bg-[linear-gradient(90deg,#0f172a,#06b6d4)]",
+    items: stats.value?.ips || [],
+  },
+  {
     key: "devices",
     title: t("stats.devices"),
     subtitle: t("stats.deviceMix"),
     accentClass: "from-slate-500/12 via-slate-400/8 to-transparent",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#475569)]",
     items: stats.value?.devices || [],
+  },
+  {
+    key: "languages",
+    title: t("stats.languages"),
+    subtitle: t("stats.languageMix"),
+    accentClass: "from-rose-500/12 via-pink-500/8 to-transparent",
+    meterClass: "bg-[linear-gradient(90deg,#0f172a,#f43f5e)]",
+    items: stats.value?.languages || [],
   },
 ]);
 
@@ -382,23 +350,6 @@ const formatShare = (value, precise = false) => {
   return precise ? precisePercentFormatter.format(value || 0) : percentFormatter.format(value || 0);
 };
 
-const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
-
-const geoPoints = computed(() => {
-  const points = stats.value?.geoPoints || [];
-  const maxVisits = Math.max(...points.map((point) => Number(point.visits || 0)), 0);
-
-  return points.map((point) => ({
-    ...point,
-    name: getCountryName(point.label),
-    x: clamp(((Number(point.longitude) + 180) / 360) * 100, 2, 98),
-    y: clamp(((90 - Number(point.latitude)) / 180) * 52, 2, 50),
-    radius: maxVisits > 0 ? 1.8 + (Number(point.visits || 0) / maxVisits) * 3.8 : 1.8,
-    share: formatShare(totalVisits.value ? Number(point.visits || 0) / totalVisits.value : 0, true),
-  }));
-});
-
-const geoLegend = computed(() => geoPoints.value.slice(0, 4));
 const hasTimelineData = computed(() => timelineSeries.value.some((point) => point.visits > 0));
 const timelineMinWidth = computed(() => `${Math.max(timelineSeries.value.length * 10, 320)}px`);
 
@@ -464,7 +415,7 @@ watch(
 
 <template>
   <Dialog :open="visible" @update:open="closeDialog">
-    <DialogContent class="w-[96%] max-w-7xl bg-white/70 shadow-lg backdrop-blur-sm !rounded-md">
+    <DialogContent class="w-[96%] max-w-7xl bg-white/70 shadow-lg backdrop-blur-sm !rounded-2xl">
       <DialogHeader class="space-y-3 text-left">
         <div class="flex items-start justify-between gap-4">
           <div class="min-w-0 flex-1 space-y-2">
@@ -489,51 +440,13 @@ watch(
           </Button>
         </div>
       </DialogHeader>
-      <div class="max-h-[80vh] overflow-y-auto space-y-6 p-1 -m-1">
-        <div class="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <div class="w-full grid gap-3 md:grid-cols-4">
-            <div class="w-full col-span-2 md:col-span-1">
-              <div class="mb-1 text-xs uppercase text-slate-400">{{ t("stats.range") }}</div>
-              <Select :model-value="rangePreset" @update:model-value="handleRangePresetChange">
-                <SelectTrigger class="rounded-md bg-white/80">
-                  <SelectValue :placeholder="t('stats.range')" />
-                </SelectTrigger>
-                <SelectContent class="rounded-md p-1">
-                  <SelectItem v-for="option in rangeOptions" :key="option.value" :value="option.value"
-                    class="cursor-pointer rounded-md">
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div class="grid gap-3 grid-cols-2 col-span-2">
-              <div class="w-full">
-                <div class="mb-1 text-xs uppercase text-slate-400">{{ t("stats.startDate") }}
-                </div>
-                <DatePicker :model-value="customStartDate" :placeholder="t('stats.startDate')"
-                  class-name="rounded-md bg-white/80" @update:model-value="handleCustomStartChange" />
-              </div>
-
-              <div class="w-full">
-                <div class="mb-1 text-xs uppercase text-slate-400">{{ t("stats.endDate") }}
-                </div>
-                <DatePicker :model-value="customEndDate" :placeholder="t('stats.endDate')"
-                  class-name="rounded-md bg-white/80" @update:model-value="handleCustomEndChange" />
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="space-y-6">
+      <div class="max-h-[80vh] overflow-y-auto space-y-3 p-2 -m-2">
+        <div class="space-y-3">
           <div v-if="loading" class="flex min-h-[320px] items-center justify-center text-slate-500">
             <div class="flex items-center gap-2">
               <i class="icon-[material-symbols--progress-activity] animate-spin text-lg" />
               <span>{{ t("stats.loading") }}</span>
             </div>
-          </div>
-
-          <div v-else-if="rangeValidationError" class="py-[18%] text-center text-amber-700">
-            {{ rangeValidationError }}
           </div>
 
           <div v-else-if="error" class="py-[18%] text-center text-amber-700">
@@ -545,40 +458,38 @@ watch(
           </div>
 
           <template v-else>
-            <div class="grid gap-3 grid-cols-2 xl:grid-cols-4">
+            <div class="h-96 overflow-hidden rounded-lg">
+              <WorldMap :countries="stats?.countries || []">
+                <template #left-top>
+                  <Select :model-value="rangePreset" @update:model-value="handleRangePresetChange">
+                    <SelectTrigger class="border-none shadow-none">
+                      <SelectValue :placeholder="t('stats.range')" />
+                    </SelectTrigger>
+                    <SelectContent class="rounded-md p-1">
+                      <SelectItem v-for="option in rangeOptions" :key="option.value" :value="option.value"
+                        class="cursor-pointer rounded-md">
+                        {{ option.label }}
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </template>
+              </WorldMap>
+            </div>
+            <div class="grid gap-3 grid-cols-2 lg:grid-cols-4 !-mt-12">
               <div v-for="card in summaryCards" :key="card.key"
-                class="rounded-md border border-slate-200/80 bg-white/80 px-4 py-4 shadow-sm">
-                <div class="text-xs uppercase tracking-[0.16em] text-slate-400">{{ card.label }}</div>
-                <div class="mt-2 break-words text-xl font-semibold tracking-tight text-slate-900">
+                class="rounded-md border border-slate-200/50 bg-white/50 px-4 py-4 shadow-sm backdrop-blur-xl">
+                <!-- <div class="text-xs uppercase tracking-[0.16em] text-slate-400">{{ card.label }}</div> -->
+                <div class="break-words text-xl font-semibold tracking-tight text-slate-900">
                   {{ card.value }}
                 </div>
-                <div class="mt-2 text-xs text-slate-500">{{ card.meta }}</div>
+                <div class="mt-2 text-sm text-slate-500">{{ card.label }}</div>
               </div>
             </div>
 
-            <div class="grid md:grid-cols-2 gap-3">
-              <section class="space-y-2">
-                <div class="flex flex-col gap-1">
-                  <h3 class="text-base font-semibold text-slate-900">{{ t("stats.location") }}</h3>
-                  <!-- <p class="text-sm text-slate-500">{{ rangeSummary }}</p> -->
-                </div>
-                <div class="h-60 rounded-md border border-slate-200/80 bg-white/80 shadow-sm">
-                  <svg viewBox="0 0 100 52" class="h-full w-full">
-                    <path v-for="shape in worldMapShapes" :key="shape" :d="shape" fill="#cbd5e1" fill-opacity="0.46"
-                      stroke="#94a3b8" stroke-opacity="0.28" stroke-width="0.5" />
-                    <g v-for="point in geoPoints" :key="`${point.label}-${point.latitude}-${point.longitude}`">
-                      <circle :cx="point.x" :cy="point.y" :r="point.radius + 1.4" fill="rgba(14,165,233,0.16)" />
-                      <circle :cx="point.x" :cy="point.y" :r="point.radius" fill="#0284c7" fill-opacity="0.9"
-                        stroke="#f8fafc" stroke-width="0.7" />
-                      <title>{{ `${point.name}: ${formatter.format(point.visits)} ${t("stats.visits")}` }}</title>
-                    </g>
-                  </svg>
-                </div>
-              </section>
-              <section class="space-y-2">
+            <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-3">
+              <section class="space-y-2 md:col-span-2">
                 <div class="flex flex-col gap-1">
                   <h3 class="text-base font-semibold text-slate-900">{{ t("stats.trend") }}</h3>
-                  <!-- <p class="text-sm text-slate-500">{{ rangeSummary }}</p> -->
                 </div>
 
                 <div v-if="hasTimelineData"
@@ -603,23 +514,22 @@ watch(
                   {{ t("stats.timelineEmpty") }}
                 </div>
               </section>
+              <PieChart :data="stats?.browsers || []" :title="t('stats.browsers')" />
+              <PieChart :data="stats?.oses || []" :title="t('stats.oses')" />
             </div>
 
-            <div class="grid gap-3 md:grid-cols-3">
+            <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               <section v-for="section in featuredBreakdownSections" :key="section.key"
-                class="overflow-hidden rounded-md border shadow-sm">
-                <div class="relative border-b px-4 py-3">
+                class="overflow-hidden rounded-md border border-slate-200/80 shadow-sm">
+                <div class="relative px-4 pt-3">
                   <div class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100"
                     :class="section.accentClass" />
                   <div class="relative flex items-start justify-between gap-4">
                     <h3 class="text-base font-semibold text-slate-900">{{ section.title }}</h3>
-                    <span class="rounded-full bg-slate-100 px-2 py-1 text-[10px] uppercase text-slate-500">
-                      {{ section.subtitle }}
-                    </span>
                   </div>
                 </div>
 
-                <div v-if="section.items.length" class="space-y-1 px-4 py-4 sm:px-5">
+                <div v-if="section.items.length" class="space-y-1 px-4 py-4">
                   <div v-for="entry in section.items" :key="`${section.key}-${entry.label}`" class="min-w-0 flex-1">
                     <div class="flex items-start justify-between gap-3">
                       <div class="w-full min-w-0">

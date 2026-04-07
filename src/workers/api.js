@@ -2,6 +2,11 @@ import { Hono } from "hono";
 
 const api = new Hono();
 
+function normalizePositiveInteger(value, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 async function GetReqJson(request) {
   let data = {};
   try {
@@ -141,61 +146,41 @@ export default class ControllerAPI {
   async get() {
     const { request, STORE } = this.utils;
     const { rows, page, search, mode } = await GetReqJson(request);
-    const { success, results } = await STORE.get({ rows, page });
-    const count = await STORE.count({});
+    const safeRows = normalizePositiveInteger(rows, 10);
+    const safePage = normalizePositiveInteger(page, 1);
+    const searchTerm = typeof search === "string" ? search.trim().toLowerCase() : "";
+    const activeMode = typeof mode === "string" ? mode : "";
+    const whereClauses = [];
+    const params = [];
 
-    let filteredResults = results;
-    let filteredCount = count;
-
-    // 如果有搜索关键词，进行过滤
-    if (search && search.trim()) {
-      const searchTerm = search.trim().toLowerCase();
-      filteredResults = results.filter((item) => {
-        let value = {};
-        try {
-          value = JSON.parse(item.value);
-        } catch (e) {
-          console.log(e);
-        }
-
-        // 搜索短网址（key）、源网址（url）、显示名称（displayName）和备注（notes）
-        const shortUrl = item.key.toLowerCase();
-        const originalUrl = (value.url || "").toLowerCase();
-        const displayName = (value.displayName || "").toLowerCase();
-        const notes = (value.notes || "").toLowerCase();
-
-        return (
-          shortUrl.includes(searchTerm) ||
-          originalUrl.includes(searchTerm) ||
-          displayName.includes(searchTerm) ||
-          notes.includes(searchTerm)
-        );
-      });
-      filteredCount = filteredResults.length;
+    if (searchTerm) {
+      const likeTerm = `%${searchTerm}%`;
+      whereClauses.push(`(
+        LOWER(key) LIKE ?
+        OR LOWER(COALESCE(json_extract(value, '$.url'), '')) LIKE ?
+        OR LOWER(COALESCE(json_extract(value, '$.displayName'), '')) LIKE ?
+        OR LOWER(COALESCE(json_extract(value, '$.notes'), '')) LIKE ?
+      )`);
+      params.push(likeTerm, likeTerm, likeTerm, likeTerm);
     }
 
-    // 如果有模式筛选，进行过滤
-    if (mode && mode !== "all") {
-      filteredResults = filteredResults.filter((item) => {
-        let value = {};
-        try {
-          value = JSON.parse(item.value);
-        } catch (e) {
-          console.log(e);
-        }
-
-        // 根据跳转模式进行筛选
-        return value.mode === mode;
-      });
-      filteredCount = filteredResults.length;
+    if (activeMode && activeMode !== "all") {
+      whereClauses.push(`json_extract(value, '$.mode') = ?`);
+      params.push(activeMode);
     }
+
+    const where = whereClauses.length > 0 ? whereClauses.join(" AND ") : "1=1";
+    const [count, { success, results = [] }] = await Promise.all([
+      STORE.count({ where, params }),
+      STORE.get({ where, params, rows: safeRows, page: safePage }),
+    ]);
 
     // 返回数据库中的短链列表
     return this.createResponse(success ? 0 : 1052, "Success", {
-      results: filteredResults,
-      count: filteredCount,
-      rows,
-      page,
+      results,
+      count,
+      rows: safeRows,
+      page: safePage,
     });
   }
 

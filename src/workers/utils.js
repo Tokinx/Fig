@@ -11,6 +11,7 @@ class DatabaseService {
         "CREATE TABLE IF NOT EXISTS slug (key TEXT PRIMARY KEY, value TEXT, creation INTEGER DEFAULT (strftime('%s', 'now')))",
       )
       .run();
+    this.db.prepare("CREATE INDEX IF NOT EXISTS idx_slug_creation ON slug(creation DESC)").run();
   }
 
   async value(key) {
@@ -18,16 +19,24 @@ class DatabaseService {
     return await stmt.first("value");
   }
 
-  async count({ where = "1=1" } = {}) {
-    const stmt = this.db.prepare(`SELECT COUNT(*) as count FROM slug WHERE key <> 'token' AND ${where}`);
+  async count({ where = "1=1", params = [] } = {}) {
+    let stmt = this.db.prepare(`SELECT COUNT(*) as count FROM slug WHERE key <> 'token' AND ${where}`);
+    if (params.length > 0) {
+      stmt = stmt.bind(...params);
+    }
     return await stmt.first("count");
   }
 
-  async get({ where = "1=1", orderby = "creation", rows = 10, page = 1 } = {}) {
-    const offset = Math.max(page - 1, 0) * rows;
-    const stmt = this.db.prepare(
-      `SELECT * FROM slug WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${rows} OFFSET ${offset}`,
+  async get({ where = "1=1", params = [], orderby = "creation", rows = 10, page = 1 } = {}) {
+    const safeRows = Math.max(Number.parseInt(rows, 10) || 10, 1);
+    const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
+    const offset = (safePage - 1) * safeRows;
+    let stmt = this.db.prepare(
+      `SELECT * FROM slug WHERE key <> 'token' AND ${where} ORDER BY ${orderby} DESC LIMIT ${safeRows} OFFSET ${offset}`,
     );
+    if (params.length > 0) {
+      stmt = stmt.bind(...params);
+    }
     return await stmt.all();
   }
 

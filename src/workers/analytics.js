@@ -27,6 +27,29 @@ function normalizeCount(value) {
   return Number(value || 0);
 }
 
+function normalizeBreakdownLabel(value) {
+  const label = String(value ?? "").trim();
+  return !label || label.toLowerCase() === "unknown" ? "unknown" : label;
+}
+
+function mergeBreakdownRows(rows, limit = DEFAULT_TOP_LIMIT) {
+  const merged = new Map();
+
+  for (const row of rows || []) {
+    const visits = normalizeCount(row?.visits);
+    if (visits <= 0) continue;
+
+    const label = normalizeBreakdownLabel(row?.label);
+    const current = merged.get(label) || { label, visits: 0 };
+    current.visits += visits;
+    merged.set(label, current);
+  }
+
+  return Array.from(merged.values())
+    .sort((left, right) => right.visits - left.visits || left.label.localeCompare(right.label))
+    .slice(0, limit);
+}
+
 function parseCookie(cookieHeader, key) {
   const prefix = `${key}=`;
   const pair = String(cookieHeader || "")
@@ -362,6 +385,7 @@ export default class AnalyticsService {
   }
 
   async queryBreakdown(slug, field, range, limit = DEFAULT_TOP_LIMIT) {
+    const rawLimit = Math.max(limit * 20, 100);
     const rows = await this.query(
       [
         `SELECT ${field} AS label, SUM(_sample_interval) AS visits`,
@@ -369,16 +393,12 @@ export default class AnalyticsService {
         `WHERE ${this.buildVisitsWhere(slug, range)}`,
         `GROUP BY label`,
         `ORDER BY visits DESC`,
-        `LIMIT ${limit}`,
+        `LIMIT ${rawLimit}`,
       ].join(" "),
     );
 
-    return rows
-      .map((row) => ({
-        label: row.label || "unknown",
-        visits: normalizeCount(row.visits),
-      }))
-      .filter((row) => row.visits > 0);
+    // 历史数据可能把缺失值写成空串/NULL，新数据则显式写入 "unknown"；这里统一合并。
+    return mergeBreakdownRows(rows, limit);
   }
 
   async queryTimeline(slug, range) {

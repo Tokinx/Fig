@@ -85,7 +85,7 @@ export default class ControllerAPI {
     if (password === PASSWORD) {
       const time = Date.now();
       const token = await SHA256(JSON.stringify([Math.random(), time]));
-      const expires = time + 86400000;
+      const expires = time + (86400000 * 120); // 120 days
       await STORE.put("token", JSON.stringify({ token, expires }));
       return this.createCookieResponse(0, "Success", token, "token", token, expires);
     }

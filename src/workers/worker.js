@@ -100,57 +100,214 @@ app.get("/404", async (c) => {
   return await serveAppShell(c, { status: 404 });
 });
 
+const PROXY_REDIRECT_STATUS_CODES = new Set([301, 302, 303, 307, 308]);
+const PROXY_HTML_REWRITE_ATTRS = ["href", "src", "action", "poster"];
+const PROXY_REQUEST_HEADER_BLOCKLIST = new Set([
+  "connection",
+  "content-length",
+  "cookie",
+  "host",
+  "x-real-ip",
+]);
+
+function shouldProxyRequestHeader(name) {
+  const lowerName = name.toLowerCase();
+  return (
+    !PROXY_REQUEST_HEADER_BLOCKLIST.has(lowerName)
+    && !lowerName.startsWith("cf-")
+    && !lowerName.startsWith("x-forwarded-")
+  );
+}
+
+function buildProxyRequestHeaders(sourceHeaders, upstreamUrl) {
+  const headers = new Headers();
+
+  for (const [name, value] of sourceHeaders.entries()) {
+    if (!shouldProxyRequestHeader(name)) {
+      continue;
+    }
+    headers.set(name, value);
+  }
+
+  if (headers.has("origin")) {
+    headers.set("origin", upstreamUrl.origin);
+  }
+
+  if (headers.has("referer")) {
+    headers.set("referer", `${upstreamUrl.origin}/`);
+  }
+
+  return headers;
+}
+
+function buildProxyPrefix(c, slug) {
+  if (!slug) {
+    return "";
+  }
+  const requestUrl = new URL(c.req.url);
+  return `${requestUrl.origin}/${slug}`;
+}
+
+function resolveProxyUrlForHtml(rawValue, currentUpstreamUrl, proxyPrefix) {
+  if (!rawValue) {
+    return rawValue;
+  }
+
+  const value = rawValue.trim();
+  if (
+    !value
+    || value.startsWith("#")
+    || /^(data:|mailto:|tel:|javascript:|blob:)/i.test(value)
+  ) {
+    return rawValue;
+  }
+
+  try {
+    const absoluteUrl = new URL(value, currentUpstreamUrl);
+    if (proxyPrefix && absoluteUrl.origin === currentUpstreamUrl.origin) {
+      return `${proxyPrefix}${absoluteUrl.pathname}${absoluteUrl.search}${absoluteUrl.hash}`;
+    }
+    return absoluteUrl.toString();
+  } catch {
+    return rawValue;
+  }
+}
+
+function rewriteSrcsetValue(srcsetValue, currentUpstreamUrl, proxyPrefix) {
+  return srcsetValue
+    .split(",")
+    .map((part) => {
+      const trimmedPart = part.trim();
+      if (!trimmedPart) {
+        return trimmedPart;
+      }
+
+      const [candidateUrl, descriptor = ""] = trimmedPart.split(/\s+/, 2);
+      const rewrittenUrl = resolveProxyUrlForHtml(candidateUrl, currentUpstreamUrl, proxyPrefix);
+      return descriptor ? `${rewrittenUrl} ${descriptor}` : rewrittenUrl;
+    })
+    .join(", ");
+}
+
+function ensureProxyBaseTag(html, proxyBaseHref) {
+  if (/<base\s/i.test(html)) {
+    return html;
+  }
+
+  if (/<head[^>]*>/i.test(html)) {
+    return html.replace(/<head([^>]*)>/i, `<head$1><base href="${proxyBaseHref}">`);
+  }
+
+  return `<base href="${proxyBaseHref}">${html}`;
+}
+
+function rewriteHtmlForProxy(html, currentUpstreamUrl, proxyPrefix, shouldInjectBase) {
+  let rewrittenHtml = html.replace(
+    /\b(href|src|action|poster)\s*=\s*(["'])(.*?)\2/gi,
+    (match, attrName, quote, value) => {
+      if (!PROXY_HTML_REWRITE_ATTRS.includes(String(attrName).toLowerCase())) {
+        return match;
+      }
+
+      const rewrittenValue = resolveProxyUrlForHtml(value, currentUpstreamUrl, proxyPrefix);
+      return `${attrName}=${quote}${rewrittenValue}${quote}`;
+    },
+  );
+
+  rewrittenHtml = rewrittenHtml.replace(/\bsrcset\s*=\s*(["'])(.*?)\1/gi, (match, quote, value) => {
+    const rewrittenValue = rewriteSrcsetValue(value, currentUpstreamUrl, proxyPrefix);
+    return `srcset=${quote}${rewrittenValue}${quote}`;
+  });
+
+  if (shouldInjectBase && proxyPrefix) {
+    rewrittenHtml = ensureProxyBaseTag(rewrittenHtml, `${proxyPrefix}/`);
+  }
+
+  return rewrittenHtml;
+}
+
+function rewriteRedirectLocation(location, currentUpstreamUrl, proxyPrefix) {
+  if (!location) {
+    return location;
+  }
+
+  try {
+    const absoluteUrl = new URL(location, currentUpstreamUrl);
+    if (proxyPrefix && absoluteUrl.origin === currentUpstreamUrl.origin) {
+      return `${proxyPrefix}${absoluteUrl.pathname}${absoluteUrl.search}${absoluteUrl.hash}`;
+    }
+    return absoluteUrl.toString();
+  } catch {
+    return location;
+  }
+}
+
+function cleanProxyResponseHeaders(headers, { dropLocation = false } = {}) {
+  const cleanHeaders = Utils.cleanProxyHeaders(headers);
+  cleanHeaders.delete("set-cookie");
+  if (dropLocation) {
+    cleanHeaders.delete("location");
+  }
+  return cleanHeaders;
+}
+
 // Helper function to handle proxy requests
 async function handleProxyRequest(c, targetUrl, slug = null) {
-  // Forward query parameters
-  const searchParams = new URL(c.req.url).searchParams;
-  const finalUrl = new URL(targetUrl);
-  for (const [key, value] of searchParams) {
-    finalUrl.searchParams.set(key, value);
+  const requestUrl = new URL(c.req.url);
+  const upstreamUrl = new URL(targetUrl);
+  const proxyPrefix = buildProxyPrefix(c, slug);
+  const isRootProxyRequest = Boolean(slug) && requestUrl.pathname === `/${slug}`;
+
+  for (const [key, value] of requestUrl.searchParams.entries()) {
+    upstreamUrl.searchParams.set(key, value);
   }
 
-  // Create request with same method, headers, and body
-  const requestInit = {
-    method: c.req.method,
-    headers: c.req.raw.headers,
-  };
-
-  // Add body for non-GET requests
-  if (c.req.method !== "GET" && c.req.method !== "HEAD") {
-    requestInit.body = c.req.raw.body;
-  }
-
-  const fetchResult = await Utils.fetchWithOptions(finalUrl.toString(), requestInit);
-
-  if (!fetchResult.success) {
-    console.error("Proxy error:", fetchResult.error);
+  let upstreamResponse;
+  try {
+    upstreamResponse = await fetch(upstreamUrl.toString(), {
+      method: c.req.method,
+      headers: buildProxyRequestHeaders(c.req.raw.headers, upstreamUrl),
+      body: c.req.method === "GET" || c.req.method === "HEAD" ? undefined : c.req.raw.body,
+      redirect: "manual",
+    });
+  } catch (error) {
+    console.error("Proxy error:", error);
     return c.text("Proxy target unreachable", 502);
   }
 
-  // Handle HTML responses
-  if (fetchResult.isHtml) {
-    let html = await fetchResult.text();
-
-    if (slug) {
-      // For subpath proxy, update base href and fix relative links
-      const baseUrl = targetUrl.replace(/\/[^/]*$/, "");
-      html = html.replace("<head>", `<head><base href="${baseUrl}/">`);
-      html = html.replace(/href="(?!http|\/\/|#)([^"]+)"/g, `href="/${slug}/$1"`);
-      html = html.replace(/src="(?!http|\/\/|data:)([^"]+)"/g, `src="/${slug}/$1"`);
-    } else {
-      // For direct proxy, just add base tag
-      html = html.replace("<head>", `<head><base href="${targetUrl}">`);
+  if (PROXY_REDIRECT_STATUS_CODES.has(upstreamResponse.status)) {
+    const headers = cleanProxyResponseHeaders(upstreamResponse.headers);
+    const location = headers.get("location");
+    if (location) {
+      headers.set("location", rewriteRedirectLocation(location, upstreamUrl, proxyPrefix));
     }
 
-    return c.html(html);
+    return new Response(upstreamResponse.body, {
+      status: upstreamResponse.status,
+      statusText: upstreamResponse.statusText,
+      headers,
+    });
   }
 
-  // Handle other content types
-  const cleanHeaders = Utils.cleanProxyHeaders(fetchResult.response.headers);
+  const contentType = upstreamResponse.headers.get("Content-Type") || "";
+  if (contentType.includes("text/html")) {
+    const html = await upstreamResponse.text();
+    const rewrittenHtml = rewriteHtmlForProxy(html, upstreamUrl, proxyPrefix, isRootProxyRequest);
+    const headers = cleanProxyResponseHeaders(upstreamResponse.headers, { dropLocation: true });
+    headers.set("content-type", contentType);
 
-  return new Response(fetchResult.response.body, {
-    status: fetchResult.response.status,
-    headers: cleanHeaders,
+    return new Response(rewrittenHtml, {
+      status: upstreamResponse.status,
+      statusText: upstreamResponse.statusText,
+      headers,
+    });
+  }
+
+  const headers = cleanProxyResponseHeaders(upstreamResponse.headers, { dropLocation: true });
+  return new Response(upstreamResponse.body, {
+    status: upstreamResponse.status,
+    statusText: upstreamResponse.statusText,
+    headers,
   });
 }
 
@@ -201,7 +358,7 @@ async function handleShortUrl(c, slug, additionalPath = "") {
       break;
 
     case "proxy":
-      response = await handleProxyRequest(c, targetUrl, additionalPath ? slug : null);
+      response = await handleProxyRequest(c, targetUrl, slug);
       break;
 
     case "remind":
@@ -288,13 +445,13 @@ async function serveAppShell(c, { status = 200, dynamicScript = "" } = {}) {
 }
 
 // 短网址 (catch-all - must be last)
-app.get("/:slug", authMiddleware, async (c) => {
+app.all("/:slug", authMiddleware, async (c) => {
   const slug = c.req.param("slug");
   return await handleShortUrl(c, slug);
 });
 
 // 短网址子路径 (catch-all - must be last)
-app.get("/:slug/*", authMiddleware, async (c) => {
+app.all("/:slug/*", authMiddleware, async (c) => {
   const slug = c.req.param("slug");
   const additionalPath = c.req.path.replace(`/${slug}`, "");
   return await handleShortUrl(c, slug, additionalPath);

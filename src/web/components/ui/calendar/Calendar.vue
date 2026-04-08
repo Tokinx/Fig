@@ -79,6 +79,8 @@ onMounted(async () => {
 </template>
 
 <style lang="postcss">
+@reference "../../../assets/index.css";
+
 .calendar {
   @apply p-3 text-center;
 }

@@ -149,7 +149,7 @@ watch(
           <div class="relative">
             <Textarea id="url" :key="`url-${locale}`" :model-value="formData.url"
               @update:model-value="(value) => (formData = { ...formData, url: value })"
-              :placeholder="t('shortLink.urlPlaceholder')" class="resize-none rounded-2xl pb-10" :rows="4"
+              :placeholder="t('shortLink.urlPlaceholder')" class="resize-none rounded-2xl pb-10 shadow-xs" :rows="4"
               :disabled="internalLoading.create" />
             <div class="absolute bottom-2 left-2 right-2 flex">
               <div class="flex gap-1 bg-white/60 backdrop-blur rounded-full overflow-auto">
@@ -171,7 +171,7 @@ watch(
           </div>
           <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
             <!-- 短链接 -->
-            <div class="flex w-full h-9 relative rounded-full border border-input shadow-sm bg-slate-100">
+            <div class="flex w-full h-9 relative rounded-full border border-input shadow-xs bg-slate-100">
               <div class="flex items-center h-full px-4 text-sm" :class="formData.creation && 'text-slate-500'">
                 {{ originalUrl }}
               </div>
@@ -208,14 +208,14 @@ watch(
             <div class="grid gap-4 grid-cols-1 sm:grid-cols-2">
               <!-- 名称 -->
               <div class="space-y-2">
-                <Input id="displayName" :key="`displayName-${locale}`" class="rounded-full"
+                <Input id="displayName" :key="`displayName-${locale}`" class="rounded-full shadow-xs"
                   :model-value="formData.displayName"
                   @update:model-value="(value) => (formData = { ...formData, displayName: value })"
                   :placeholder="t('shortLink.displayNamePlaceholder')" :disabled="internalLoading.create" />
               </div>
               <!-- 密码 -->
               <div class="space-y-2">
-                <Input id="passcode" :key="`passcode-${locale}`" class="rounded-full" :model-value="formData.passcode"
+                <Input id="passcode" :key="`passcode-${locale}`" class="rounded-full shadow-xs" :model-value="formData.passcode"
                   @update:model-value="(value) => (formData = { ...formData, passcode: value })"
                   :placeholder="t('shortLink.passcodePlaceholder')" :disabled="internalLoading.create" />
               </div>
@@ -223,7 +223,7 @@ watch(
             <!-- 备注 -->
             <Textarea id="notes" :key="`notes-${locale}`" :model-value="formData.notes"
               @update:model-value="(value) => (formData = { ...formData, notes: value })"
-              :placeholder="t('shortLink.notesPlaceholder')" class="rounded-2xl resize-none" rows="4"
+              :placeholder="t('shortLink.notesPlaceholder')" class="rounded-2xl resize-none shadow-xs" rows="4"
               :disabled="internalLoading.create" />
           </div>
         </div>

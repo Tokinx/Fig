@@ -259,7 +259,6 @@ const featuredBreakdownSections = computed(() => [
     key: "referrers",
     title: t("stats.referrers"),
     subtitle: t("stats.sourceHealth"),
-    accentClass: "from-emerald-500/12 via-teal-500/8 to-transparent",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#10b981)]",
     items: stats.value?.referrers || [],
   },
@@ -267,7 +266,6 @@ const featuredBreakdownSections = computed(() => [
     key: "ips",
     title: t("stats.ips"),
     subtitle: t("stats.ipDist"),
-    accentClass: "from-cyan-500/12 via-teal-500/8 to-transparent",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#06b6d4)]",
     items: stats.value?.ips || [],
   },
@@ -275,7 +273,6 @@ const featuredBreakdownSections = computed(() => [
     key: "devices",
     title: t("stats.devices"),
     subtitle: t("stats.deviceMix"),
-    accentClass: "from-slate-500/12 via-slate-400/8 to-transparent",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#475569)]",
     items: stats.value?.devices || [],
   },
@@ -283,7 +280,6 @@ const featuredBreakdownSections = computed(() => [
     key: "languages",
     title: t("stats.languages"),
     subtitle: t("stats.languageMix"),
-    accentClass: "from-rose-500/12 via-pink-500/8 to-transparent",
     meterClass: "bg-[linear-gradient(90deg,#0f172a,#f43f5e)]",
     items: stats.value?.languages || [],
   },
@@ -522,8 +518,7 @@ watch(
               <section v-for="section in featuredBreakdownSections" :key="section.key"
                 class="overflow-hidden rounded-md border border-slate-200/80 shadow-sm">
                 <div class="relative px-4 pt-3">
-                  <div class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100"
-                    :class="section.accentClass" />
+                  <div class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100"/>
                   <div class="relative flex items-start justify-between gap-4">
                     <h3 class="text-base font-semibold text-slate-900">{{ section.title }}</h3>
                   </div>

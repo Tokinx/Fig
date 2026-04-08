@@ -134,11 +134,11 @@ const closeDialog = () => {
               {{ shortUrl }}
             </code>
             <div class="flex items-center justify-center gap-2">
-              <Button variant="outline" @click="copyShortUrl" size="sm" class="rounded-full">
+              <Button variant="outline" @click="copyShortUrl" size="sm" class="rounded-full shadow-xs">
                 <i class="icon-[material-symbols--content-copy] mr-1" />
                 复制
               </Button>
-              <Button variant="outline" @click="downloadQRCode" size="sm" class="rounded-full">
+              <Button variant="outline" @click="downloadQRCode" size="sm" class="rounded-full shadow-xs">
                 <i class="icon-[material-symbols--download] mr-1 text-lg" />
                 下载
               </Button>

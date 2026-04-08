@@ -76,7 +76,7 @@ const percentFormatter = new Intl.NumberFormat(undefined, {
       <h3 class="text-base font-semibold text-slate-900">{{ title }}</h3>
     </div>
 
-    <div class="h-60 flex items-center justify-center rounded-md border border-slate-200/80 bg-white/80 shadow-sm p-4">
+    <div class="h-60 flex items-center justify-center rounded-md border border-slate-200/80 bg-white/80 shadow-xs p-4">
       <div v-if="segments.length === 0" class="text-sm text-slate-500">
         暂无数据
       </div>

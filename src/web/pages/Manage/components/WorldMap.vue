@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onBeforeUnmount, onMounted } from "vue";
 import { use } from "echarts/core";
 import { MapChart } from "echarts/charts";
 import { VisualMapComponent, TooltipComponent } from "echarts/components";
@@ -20,6 +20,9 @@ const props = defineProps({
 
 const { t, locale } = useI18n();
 const mapReady = ref(false);
+const containerRef = ref(null);
+const containerWidth = ref(0);
+let resizeObserver = null;
 
 const maxVisits = computed(() => Math.max(...props.countries.map((c) => Number(c.visits || 0)), 0));
 
@@ -103,6 +106,13 @@ const mapData = computed(() => {
     }));
 });
 
+const mapLayoutSize = computed(() => {
+  if (containerWidth.value > 0) {
+    return Math.round(containerWidth.value) * 0.9;
+  }
+  return "100%";
+});
+
 // ECharts 配置
 const option = computed(() => ({
   tooltip: {
@@ -134,6 +144,8 @@ const option = computed(() => ({
     {
       type: "map",
       map: "world",
+      layoutCenter: ["50%", "62%"],
+      layoutSize: mapLayoutSize.value,
       roam: true,
       scaleLimit: {
         min: 0.5,
@@ -161,6 +173,16 @@ const option = computed(() => ({
 
 // 加载并注册世界地图
 onMounted(async () => {
+  if (typeof ResizeObserver === "function" && containerRef.value) {
+    resizeObserver = new ResizeObserver((entries) => {
+      const [entry] = entries;
+      if (!entry) return;
+      containerWidth.value = entry.contentRect.width;
+    });
+    resizeObserver.observe(containerRef.value);
+    containerWidth.value = containerRef.value.clientWidth || 0;
+  }
+
   try {
     const response = await fetch("https://fastly.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json");
     const geoJSON = await response.json();
@@ -170,13 +192,18 @@ onMounted(async () => {
     console.error("Failed to load world map:", error);
   }
 });
+
+onBeforeUnmount(() => {
+  resizeObserver?.disconnect();
+  resizeObserver = null;
+});
 </script>
 
 <template>
-  <div class="relative h-full w-full overflow-hidden bg-slate-50/50">
+  <div ref="containerRef" class="relative h-full w-full overflow-hidden bg-slate-100/50">
     <!-- 左侧国家列表 -->
     <div class="absolute left-3 top-3 z-10 w-60 rounded-md bg-white/50 shadow-sm backdrop-blur-lg">
-      <div class="border-b border-slate-500/10 mx-3">
+      <div class="border-b border-slate-500/10 mt-1 mx-3">
         <slot name="left-top"></slot>
       </div>
       <div class="max-h-64 overflow-y-auto p-2">

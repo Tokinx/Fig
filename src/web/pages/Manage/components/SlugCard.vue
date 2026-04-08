@@ -155,7 +155,7 @@ const handleOperate = async (operate) => {
 };
 </script>
 <template>
-  <Card class="transition-all duration-200 rounded-2xl shadow-sm hover:shadow-md border-border">
+  <Card class="transition-all duration-200 rounded-2xl shadow-xs hover:shadow-md border-border">
     <div class="p-5">
       <div class="flex flex-col space-y-2">
         <div class="flex flex-col space-y-1 min-w-0 flex-1">

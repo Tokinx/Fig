@@ -473,7 +473,7 @@ watch(
             </div>
             <div class="grid gap-3 grid-cols-2 lg:grid-cols-4 !-mt-12">
               <div v-for="card in summaryCards" :key="card.key"
-                class="rounded-md border border-slate-200/50 bg-white/50 px-4 py-4 shadow-sm backdrop-blur-xl">
+                class="rounded-md border border-slate-200/50 bg-white/50 px-4 py-4 shadow-xs backdrop-blur-xl">
                 <!-- <div class="text-xs uppercase tracking-[0.16em] text-slate-400">{{ card.label }}</div> -->
                 <div class="break-words text-xl font-semibold tracking-tight text-slate-900">
                   {{ card.value }}
@@ -489,7 +489,7 @@ watch(
                 </div>
 
                 <div v-if="hasTimelineData"
-                  class="h-60 rounded-md border border-slate-200/80 bg-white/80 shadow-sm flex flex-col p-3">
+                  class="h-60 rounded-md border border-slate-200/80 bg-white/80 shadow-xs flex flex-col p-3">
                   <div class="flex h-full items-end gap-[1px]">
                     <div v-for="point in timelineSeries" :key="point.key"
                       class="group flex h-full flex-1 items-end hover:bg-slate-50"
@@ -506,7 +506,7 @@ watch(
                 </div>
 
                 <div v-else
-                  class="flex h-60 items-center justify-center rounded-md border border-slate-200/80 bg-white/80 text-sm text-slate-500 shadow-sm">
+                  class="flex h-60 items-center justify-center rounded-md border border-slate-200/80 bg-white/80 text-sm text-slate-500 shadow-xs">
                   {{ t("stats.timelineEmpty") }}
                 </div>
               </section>
@@ -516,7 +516,7 @@ watch(
 
             <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
               <section v-for="section in featuredBreakdownSections" :key="section.key"
-                class="overflow-hidden rounded-md border border-slate-200/80 shadow-sm">
+                class="overflow-hidden rounded-md border border-slate-200/80 shadow-xs">
                 <div class="relative px-4 pt-3">
                   <div class="pointer-events-none absolute inset-0 bg-gradient-to-br opacity-100"/>
                   <div class="relative flex items-start justify-between gap-4">

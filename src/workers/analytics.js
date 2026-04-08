@@ -5,6 +5,7 @@ const VISIT_EVENT = "visit";
 const VISITOR_COOKIE_NAME = "fig_vid";
 const VISITOR_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
 const GEO_ENABLED_FLAG = "1";
+const DEFAULT_TIME_ZONE = "Etc/UTC";
 const RANGE_PRESET_DAYS = {
   "1d": 1,
   "7d": 7,
@@ -101,16 +102,56 @@ function parseDateKey(value) {
   return Number.isNaN(parsed.getTime()) ? null : parsed;
 }
 
+function normalizeTimeZone(value) {
+  const candidate = String(value || "").trim();
+  if (!candidate) {
+    return DEFAULT_TIME_ZONE;
+  }
+
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: candidate }).format(new Date());
+    return candidate;
+  } catch {
+    return DEFAULT_TIME_ZONE;
+  }
+}
+
 function serializeRange(range) {
   return {
     preset: range.preset,
     startDate: range.startDate,
     endDate: range.endDate,
     days: range.days,
+    timezone: range.timezone || DEFAULT_TIME_ZONE,
   };
 }
 
-function resolveRange({ preset, startDate, endDate } = {}) {
+function resolveRange({ preset, startDate, endDate, timezone } = {}) {
+  const normalizedTimeZone = normalizeTimeZone(timezone);
+
+  if (preset === "custom" || startDate || endDate) {
+    const parsedStart = parseDateKey(startDate);
+    const parsedEnd = parseDateKey(endDate);
+
+    if (!parsedStart || !parsedEnd) {
+      throw new Error("Invalid custom date range.");
+    }
+
+    const sortedRange = parsedStart <= parsedEnd ? [parsedStart, parsedEnd] : [parsedEnd, parsedStart];
+    const [rangeStart, rangeEnd] = sortedRange;
+    const days = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1;
+
+    return {
+      preset: preset || "custom",
+      startDate: formatDateKey(rangeStart),
+      endDate: formatDateKey(rangeEnd),
+      days,
+      startAt: rangeStart,
+      endExclusive: addUtcDays(rangeEnd, 1),
+      timezone: normalizedTimeZone,
+    };
+  }
+
   // 月份预设：m0 = 当月, m1 = 上月, m2 = 上上月, m3 = 三个月前
   if (preset && preset.startsWith("m")) {
     const monthOffset = parseInt(preset.slice(1), 10);
@@ -128,30 +169,9 @@ function resolveRange({ preset, startDate, endDate } = {}) {
         days,
         startAt,
         endExclusive: addUtcDays(endAt, 1),
+        timezone: normalizedTimeZone,
       };
     }
-  }
-
-  if (preset === "custom" || startDate || endDate) {
-    const parsedStart = parseDateKey(startDate);
-    const parsedEnd = parseDateKey(endDate);
-
-    if (!parsedStart || !parsedEnd) {
-      throw new Error("Invalid custom date range.");
-    }
-
-    const sortedRange = parsedStart <= parsedEnd ? [parsedStart, parsedEnd] : [parsedEnd, parsedStart];
-    const [rangeStart, rangeEnd] = sortedRange;
-    const days = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1;
-
-    return {
-      preset: "custom",
-      startDate: formatDateKey(rangeStart),
-      endDate: formatDateKey(rangeEnd),
-      days,
-      startAt: rangeStart,
-      endExclusive: addUtcDays(rangeEnd, 1),
-    };
   }
 
   const resolvedPreset = RANGE_PRESET_DAYS[preset] ? preset : DEFAULT_RANGE_PRESET;
@@ -166,6 +186,7 @@ function resolveRange({ preset, startDate, endDate } = {}) {
     days,
     startAt,
     endExclusive: addUtcDays(today, 1),
+    timezone: normalizedTimeZone,
   };
 }
 
@@ -357,11 +378,24 @@ export default class AnalyticsService {
   }
 
   buildVisitsWhere(slug, range, extraClauses = []) {
+    const timezone = normalizeTimeZone(range?.timezone);
+    const localStartDate = range?.startDate;
+    const localEndExclusive = range?.endExclusive ? formatDateKey(range.endExclusive) : "";
+    const localBoundaryClauses =
+      localStartDate && localEndExclusive
+        ? [
+            `timestamp >= toDateTime('${escapeSqlString(`${localStartDate} 00:00:00`)}', '${escapeSqlString(timezone)}')`,
+            `timestamp < toDateTime('${escapeSqlString(`${localEndExclusive} 00:00:00`)}', '${escapeSqlString(timezone)}')`,
+          ]
+        : [
+            `timestamp >= toDateTime('${formatSqlDateTime(range.startAt)}')`,
+            `timestamp < toDateTime('${formatSqlDateTime(range.endExclusive)}')`,
+          ];
+
     return [
       `index1 = '${escapeSqlString(slug)}'`,
       `blob1 = '${VISIT_EVENT}'`,
-      `timestamp >= toDateTime('${formatSqlDateTime(range.startAt)}')`,
-      `timestamp < toDateTime('${formatSqlDateTime(range.endExclusive)}')`,
+      ...localBoundaryClauses,
       ...extraClauses,
     ].join(" AND ");
   }
@@ -402,9 +436,15 @@ export default class AnalyticsService {
   }
 
   async queryTimeline(slug, range) {
+    const timezone = normalizeTimeZone(range?.timezone);
+    const bucketExpression =
+      range?.startDate && range?.endDate
+        ? `formatDateTime(timestamp, '%Y-%m-%d', '${escapeSqlString(timezone)}')`
+        : `formatDateTime(toStartOfDay(timestamp), '%Y-%m-%d')`;
+
     const rows = await this.query(
       [
-        `SELECT toStartOfDay(timestamp) AS bucket, SUM(_sample_interval) AS visits`,
+        `SELECT ${bucketExpression} AS bucket, SUM(_sample_interval) AS visits`,
         `FROM ${this.getDataset()}`,
         `WHERE ${this.buildVisitsWhere(slug, range)}`,
         `GROUP BY bucket`,

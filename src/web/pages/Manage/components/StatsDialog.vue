@@ -27,6 +27,12 @@ const error = ref("");
 const stats = ref(null);
 const requestSequence = ref(0);
 const rangePreset = ref("30d");
+const RANGE_PRESET_DAYS = {
+  "1d": 1,
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+};
 
 const startOfLocalDay = (value) => {
   const date = new Date(value);
@@ -88,6 +94,14 @@ const rangeOptions = computed(() => {
   ];
 });
 
+const clientTimeZone = computed(() => {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Etc/UTC";
+  } catch {
+    return "Etc/UTC";
+  }
+});
+
 const getModeLabel = (mode) => {
   const key = `modes.${mode}`;
   const label = t(key);
@@ -135,8 +149,38 @@ const handleRangePresetChange = (value) => {
   rangePreset.value = value || "30d";
 };
 
+const resolveLocalRangePayload = (preset) => {
+  const resolvedPreset = typeof preset === "string" ? preset : "30d";
+  const today = startOfLocalDay(new Date());
+
+  if (resolvedPreset.startsWith("m")) {
+    const monthOffset = Number.parseInt(resolvedPreset.slice(1), 10);
+    if (Number.isFinite(monthOffset) && monthOffset >= 0) {
+      const startAt = new Date(today.getFullYear(), today.getMonth() - monthOffset, 1);
+      const endAt = new Date(today.getFullYear(), today.getMonth() - monthOffset + 1, 0);
+
+      return {
+        preset: resolvedPreset,
+        startDate: formatDateKey(startAt),
+        endDate: formatDateKey(endAt),
+        timezone: clientTimeZone.value,
+      };
+    }
+  }
+
+  const days = RANGE_PRESET_DAYS[resolvedPreset] || RANGE_PRESET_DAYS["30d"];
+  const startAt = addLocalDays(today, -(days - 1));
+
+  return {
+    preset: RANGE_PRESET_DAYS[resolvedPreset] ? resolvedPreset : "30d",
+    startDate: formatDateKey(startAt),
+    endDate: formatDateKey(today),
+    timezone: clientTimeZone.value,
+  };
+};
+
 const requestPayload = computed(() => {
-  return { preset: rangePreset.value };
+  return resolveLocalRangePayload(rangePreset.value);
 });
 
 const requestFingerprint = computed(() => {

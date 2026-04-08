@@ -242,8 +242,11 @@ function rewriteRedirectLocation(location, currentUpstreamUrl, proxyPrefix) {
   }
 }
 
-function cleanProxyResponseHeaders(headers, { dropLocation = false } = {}) {
-  const cleanHeaders = Utils.cleanProxyHeaders(headers);
+function cleanProxyResponseHeaders(
+  headers,
+  { dropLocation = false, preserveEncoding = false, preserveLength = false } = {},
+) {
+  const cleanHeaders = Utils.cleanProxyHeaders(headers, { preserveEncoding, preserveLength });
   cleanHeaders.delete("set-cookie");
   if (dropLocation) {
     cleanHeaders.delete("location");
@@ -276,7 +279,10 @@ async function handleProxyRequest(c, targetUrl, slug = null) {
   }
 
   if (PROXY_REDIRECT_STATUS_CODES.has(upstreamResponse.status)) {
-    const headers = cleanProxyResponseHeaders(upstreamResponse.headers);
+    const headers = cleanProxyResponseHeaders(upstreamResponse.headers, {
+      preserveEncoding: true,
+      preserveLength: true,
+    });
     const location = headers.get("location");
     if (location) {
       headers.set("location", rewriteRedirectLocation(location, upstreamUrl, proxyPrefix));
@@ -286,6 +292,7 @@ async function handleProxyRequest(c, targetUrl, slug = null) {
       status: upstreamResponse.status,
       statusText: upstreamResponse.statusText,
       headers,
+      encodeBody: "manual",
     });
   }
 
@@ -303,11 +310,16 @@ async function handleProxyRequest(c, targetUrl, slug = null) {
     });
   }
 
-  const headers = cleanProxyResponseHeaders(upstreamResponse.headers, { dropLocation: true });
+  const headers = cleanProxyResponseHeaders(upstreamResponse.headers, {
+    dropLocation: true,
+    preserveEncoding: true,
+    preserveLength: true,
+  });
   return new Response(upstreamResponse.body, {
     status: upstreamResponse.status,
     statusText: upstreamResponse.statusText,
     headers,
+    encodeBody: "manual",
   });
 }
 

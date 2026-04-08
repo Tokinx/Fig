@@ -171,10 +171,14 @@ export default class Utils {
     return response?.headers.get("Content-Type")?.includes("text/html") || false;
   }
 
-  static cleanProxyHeaders(headers) {
+  static cleanProxyHeaders(headers, { preserveEncoding = false, preserveLength = false } = {}) {
     const cleanHeaders = new Headers(headers);
-    cleanHeaders.delete("content-encoding");
-    cleanHeaders.delete("content-length");
+    if (!preserveEncoding) {
+      cleanHeaders.delete("content-encoding");
+    }
+    if (!preserveLength) {
+      cleanHeaders.delete("content-length");
+    }
     return cleanHeaders;
   }
 }

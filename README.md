@@ -19,6 +19,11 @@
 - 克隆项目到本地，修改 `wrangler.jsonc` 和 `.dev.vars`
 - `npm run deploy` 上传 Worker 代码和静态资源
 
+## 界面预览
+|               首页                |                创建                 |                  分析                  |
+| :-------------------------------: | :---------------------------------: | :------------------------------------: |
+| ![image](./docs/example/home.png) | ![image](./docs/example/create.png) | ![image](./docs/example/analytics.png) |
+
 ## 路由说明
 
 - `/api/*`：后端 API
@@ -77,15 +82,15 @@ cp .dev.vars.example .dev.vars
   "main": "src/workers/worker.js",
   "vars": {
     "FRONTEND_DEV_SERVER_URL": "http://127.0.0.1:5173",
-    "SLUG_LENGTH": 5
+    "SLUG_LENGTH": 5,
   },
   "d1_databases": [
     {
       "binding": "SQLITE",
       "database_name": "slug-dev",
-      "database_id": "your-dev-database-id"
-    }
-  ]
+      "database_id": "your-dev-database-id",
+    },
+  ],
 }
 ```
 

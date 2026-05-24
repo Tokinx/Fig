@@ -116,6 +116,55 @@ function normalizeTimeZone(value) {
   }
 }
 
+// Cloudflare Analytics Engine 实测不支持 toDateTime/formatDateTime 的 timezone 参数重载，
+// 因此时区转换必须在 JS 层完成：把 timezone 下的本地日期（YYYY-MM-DD 00:00:00）转换为 UTC 时刻。
+function getZoneOffsetMs(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  const parts = dtf.formatToParts(date).reduce((acc, part) => {
+    if (part.type !== "literal") acc[part.type] = part.value;
+    return acc;
+  }, {});
+
+  const zonedAsUtc = Date.UTC(
+    Number(parts.year),
+    Number(parts.month) - 1,
+    Number(parts.day),
+    Number(parts.hour) % 24,
+    Number(parts.minute),
+    Number(parts.second),
+  );
+
+  return zonedAsUtc - date.getTime();
+}
+
+function zonedDateToUtc(year, month, day, timeZone) {
+  const naiveUtcMs = Date.UTC(year, month - 1, day, 0, 0, 0);
+  // 两次迭代以处理 DST 跨界场景
+  const offset1 = getZoneOffsetMs(new Date(naiveUtcMs), timeZone);
+  const candidate = new Date(naiveUtcMs - offset1);
+  const offset2 = getZoneOffsetMs(candidate, timeZone);
+  return new Date(naiveUtcMs - offset2);
+}
+
+function resolveZonedBoundary(dateKey, timeZone, offsetDays = 0) {
+  const parsed = parseDateKey(dateKey);
+  if (!parsed) return null;
+
+  const targetMs = parsed.getTime() + offsetDays * 86400000;
+  const target = new Date(targetMs);
+  return zonedDateToUtc(target.getUTCFullYear(), target.getUTCMonth() + 1, target.getUTCDate(), timeZone);
+}
+
 function serializeRange(range) {
   return {
     preset: range.preset,
@@ -140,14 +189,16 @@ function resolveRange({ preset, startDate, endDate, timezone } = {}) {
     const sortedRange = parsedStart <= parsedEnd ? [parsedStart, parsedEnd] : [parsedEnd, parsedStart];
     const [rangeStart, rangeEnd] = sortedRange;
     const days = Math.floor((rangeEnd.getTime() - rangeStart.getTime()) / 86400000) + 1;
+    const startKey = formatDateKey(rangeStart);
+    const endKey = formatDateKey(rangeEnd);
 
     return {
       preset: preset || "custom",
-      startDate: formatDateKey(rangeStart),
-      endDate: formatDateKey(rangeEnd),
+      startDate: startKey,
+      endDate: endKey,
       days,
-      startAt: rangeStart,
-      endExclusive: addUtcDays(rangeEnd, 1),
+      startAt: resolveZonedBoundary(startKey, normalizedTimeZone, 0) || rangeStart,
+      endExclusive: resolveZonedBoundary(endKey, normalizedTimeZone, 1) || addUtcDays(rangeEnd, 1),
       timezone: normalizedTimeZone,
     };
   }
@@ -161,14 +212,16 @@ function resolveRange({ preset, startDate, endDate, timezone } = {}) {
       const startAt = targetDate;
       const endAt = new Date(Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth() + 1, 0)); // 月末
       const days = Math.floor((endAt.getTime() - startAt.getTime()) / 86400000) + 1;
+      const startKey = formatDateKey(startAt);
+      const endKey = formatDateKey(endAt);
 
       return {
         preset,
-        startDate: formatDateKey(startAt),
-        endDate: formatDateKey(endAt),
+        startDate: startKey,
+        endDate: endKey,
         days,
-        startAt,
-        endExclusive: addUtcDays(endAt, 1),
+        startAt: resolveZonedBoundary(startKey, normalizedTimeZone, 0) || startAt,
+        endExclusive: resolveZonedBoundary(endKey, normalizedTimeZone, 1) || addUtcDays(endAt, 1),
         timezone: normalizedTimeZone,
       };
     }
@@ -178,14 +231,16 @@ function resolveRange({ preset, startDate, endDate, timezone } = {}) {
   const days = RANGE_PRESET_DAYS[resolvedPreset];
   const today = startOfUtcDay(new Date());
   const startAt = addUtcDays(today, -(days - 1));
+  const startKey = formatDateKey(startAt);
+  const endKey = formatDateKey(today);
 
   return {
     preset: resolvedPreset,
-    startDate: formatDateKey(startAt),
-    endDate: formatDateKey(today),
+    startDate: startKey,
+    endDate: endKey,
     days,
-    startAt,
-    endExclusive: addUtcDays(today, 1),
+    startAt: resolveZonedBoundary(startKey, normalizedTimeZone, 0) || startAt,
+    endExclusive: resolveZonedBoundary(endKey, normalizedTimeZone, 1) || addUtcDays(today, 1),
     timezone: normalizedTimeZone,
   };
 }
@@ -378,24 +433,11 @@ export default class AnalyticsService {
   }
 
   buildVisitsWhere(slug, range, extraClauses = []) {
-    const timezone = normalizeTimeZone(range?.timezone);
-    const localStartDate = range?.startDate;
-    const localEndExclusive = range?.endExclusive ? formatDateKey(range.endExclusive) : "";
-    const localBoundaryClauses =
-      localStartDate && localEndExclusive
-        ? [
-            `timestamp >= toDateTime('${escapeSqlString(`${localStartDate} 00:00:00`)}', '${escapeSqlString(timezone)}')`,
-            `timestamp < toDateTime('${escapeSqlString(`${localEndExclusive} 00:00:00`)}', '${escapeSqlString(timezone)}')`,
-          ]
-        : [
-            `timestamp >= toDateTime('${formatSqlDateTime(range.startAt)}')`,
-            `timestamp < toDateTime('${formatSqlDateTime(range.endExclusive)}')`,
-          ];
-
     return [
       `index1 = '${escapeSqlString(slug)}'`,
       `blob1 = '${VISIT_EVENT}'`,
-      ...localBoundaryClauses,
+      `timestamp >= toDateTime('${formatSqlDateTime(range.startAt)}')`,
+      `timestamp < toDateTime('${formatSqlDateTime(range.endExclusive)}')`,
       ...extraClauses,
     ].join(" AND ");
   }
@@ -436,26 +478,42 @@ export default class AnalyticsService {
   }
 
   async queryTimeline(slug, range) {
-    const timezone = normalizeTimeZone(range?.timezone);
-    const bucketExpression =
-      range?.startDate && range?.endDate
-        ? `formatDateTime(timestamp, '%Y-%m-%d', '${escapeSqlString(timezone)}')`
-        : `formatDateTime(toStartOfDay(timestamp), '%Y-%m-%d')`;
-
+    // Cloudflare Analytics Engine 实测拒绝 formatDateTime/toDateTime 的 timezone 重载，
+    // 因此按 UTC 小时分桶并以 Unix 时间戳返回（避免 DateTime 字符串跨时区解析歧义），
+    // 由 JS 根据 timezone 重新汇总为天。
     const rows = await this.query(
       [
-        `SELECT ${bucketExpression} AS bucket, SUM(_sample_interval) AS visits`,
+        `SELECT toUnixTimestamp(toStartOfHour(timestamp)) AS bucket_seconds, SUM(_sample_interval) AS visits`,
         `FROM ${this.getDataset()}`,
         `WHERE ${this.buildVisitsWhere(slug, range)}`,
-        `GROUP BY bucket`,
-        `ORDER BY bucket ASC`,
+        `GROUP BY bucket_seconds`,
+        `ORDER BY bucket_seconds ASC`,
       ].join(" "),
     );
 
-    return rows.map((row) => ({
-      bucket: row.bucket,
-      visits: normalizeCount(row.visits),
-    }));
+    const timezone = normalizeTimeZone(range?.timezone);
+    const dayFormatter = new Intl.DateTimeFormat("en-CA", {
+      timeZone: timezone,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    });
+
+    const dailyMap = new Map();
+    for (const row of rows) {
+      const visits = normalizeCount(row?.visits);
+      if (visits <= 0) continue;
+
+      const seconds = Number(row?.bucket_seconds);
+      if (!Number.isFinite(seconds)) continue;
+
+      const dayKey = dayFormatter.format(new Date(seconds * 1000));
+      dailyMap.set(dayKey, (dailyMap.get(dayKey) || 0) + visits);
+    }
+
+    return Array.from(dailyMap.entries())
+      .map(([bucket, visits]) => ({ bucket, visits }))
+      .sort((left, right) => (left.bucket < right.bucket ? -1 : left.bucket > right.bucket ? 1 : 0));
   }
 
   async queryGeoPoints(slug, range, limit = DEFAULT_GEO_LIMIT) {

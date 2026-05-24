@@ -186,7 +186,7 @@ export default class ControllerAPI {
 
   async stats() {
     const { request } = this.utils;
-    const { slug, preset, startDate, endDate } = await GetReqJson(request);
+    const { slug, preset, startDate, endDate, timezone } = await GetReqJson(request);
 
     if (!slug) {
       return this.createErrorResponse(1080, "Slug is required.");
@@ -198,7 +198,7 @@ export default class ControllerAPI {
     }
 
     try {
-      const data = await this.analytics?.getStats(slug, { preset, startDate, endDate });
+      const data = await this.analytics?.getStats(slug, { preset, startDate, endDate, timezone });
       return this.createSuccessResponse(
         data || {
           enabled: false,
@@ -216,7 +216,8 @@ export default class ControllerAPI {
       if (error.message === "Invalid custom date range.") {
         return this.createErrorResponse(1082, error.message, 400);
       }
-      return this.createErrorResponse(1082, "Failed to load analytics stats.", 500);
+      const detail = error?.message ? `: ${error.message}` : "";
+      return this.createErrorResponse(1082, `Failed to load analytics stats${detail}`, 500);
     }
   }
 

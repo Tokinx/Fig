@@ -165,6 +165,25 @@ function resolveZonedBoundary(dateKey, timeZone, offsetDays = 0) {
   return zonedDateToUtc(target.getUTCFullYear(), target.getUTCMonth() + 1, target.getUTCDate(), timeZone);
 }
 
+// Cloudflare Analytics Engine 的 SQL API 存在 burst 限流，
+// 并发执行多个查询时容易触发 "Rate limited" 错误，因此限制并发度。
+async function runWithConcurrency(tasks, limit) {
+  const results = new Array(tasks.length);
+  let cursor = 0;
+
+  async function worker() {
+    while (true) {
+      const index = cursor++;
+      if (index >= tasks.length) return;
+      results[index] = await tasks[index]();
+    }
+  }
+
+  const workers = Array.from({ length: Math.min(limit, tasks.length) }, () => worker());
+  await Promise.all(workers);
+  return results;
+}
+
 function serializeRange(range) {
   return {
     preset: range.preset,
@@ -402,34 +421,51 @@ export default class AnalyticsService {
       return [];
     }
 
-    const response = await fetch(this.getApiUrl(), {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.env.CF_API_TOKEN}`,
-        "Content-Type": "text/plain",
-      },
-      body: sql,
-    });
+    const maxAttempts = 4;
+    let lastError = null;
 
-    const rawText = await response.text();
-    let payload = {};
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      const response = await fetch(this.getApiUrl(), {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${this.env.CF_API_TOKEN}`,
+          "Content-Type": "text/plain",
+        },
+        body: sql,
+      });
 
-    try {
-      payload = rawText ? JSON.parse(rawText) : {};
-    } catch (error) {
-      throw new Error(`Analytics query returned invalid JSON: ${rawText || error.message}`);
-    }
+      const rawText = await response.text();
+      let payload = {};
 
-    if (!response.ok || payload.success === false) {
+      try {
+        payload = rawText ? JSON.parse(rawText) : {};
+      } catch (error) {
+        throw new Error(`Analytics query returned invalid JSON: ${rawText || error.message}`);
+      }
+
+      if (response.ok && payload.success !== false) {
+        return payload.data || payload.result || [];
+      }
+
       const message =
         payload?.errors?.map((item) => item.message).join("; ") ||
         payload?.messages?.map((item) => item.message).join("; ") ||
         rawText ||
         "Analytics query failed.";
+
+      // Cloudflare Analytics Engine 偶发 burst 限流，指数退避后重试
+      const isRateLimited = response.status === 429 || /rate limit/i.test(message);
+      if (isRateLimited && attempt < maxAttempts) {
+        const delay = 250 * 2 ** (attempt - 1) + Math.floor(Math.random() * 150);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        lastError = new Error(message);
+        continue;
+      }
+
       throw new Error(message);
     }
 
-    return payload.data || payload.result || [];
+    throw lastError || new Error("Analytics query failed.");
   }
 
   buildVisitsWhere(slug, range, extraClauses = []) {
@@ -562,19 +598,23 @@ export default class AnalyticsService {
       };
     }
 
-    const [totalVisits, totalVisitors, timeline, countries, referrers, devices, geoPoints, ips, oses, languages, browsers] = await Promise.all([
-      this.queryVisitsTotal(slug, range),
-      this.queryUniqueVisitors(slug, range),
-      this.queryTimeline(slug, range),
-      this.queryBreakdown(slug, "blob3", range),
-      this.queryBreakdown(slug, "blob4", range),
-      this.queryBreakdown(slug, "blob5", range),
-      this.queryGeoPoints(slug, range),
-      this.queryBreakdown(slug, "blob8", range),
-      this.queryBreakdown(slug, "blob9", range),
-      this.queryBreakdown(slug, "blob10", range),
-      this.queryBreakdown(slug, "blob11", range),
-    ]);
+    const [totalVisits, totalVisitors, timeline, countries, referrers, devices, geoPoints, ips, oses, languages, browsers] =
+      await runWithConcurrency(
+        [
+          () => this.queryVisitsTotal(slug, range),
+          () => this.queryUniqueVisitors(slug, range),
+          () => this.queryTimeline(slug, range),
+          () => this.queryBreakdown(slug, "blob3", range),
+          () => this.queryBreakdown(slug, "blob4", range),
+          () => this.queryBreakdown(slug, "blob5", range),
+          () => this.queryGeoPoints(slug, range),
+          () => this.queryBreakdown(slug, "blob8", range),
+          () => this.queryBreakdown(slug, "blob9", range),
+          () => this.queryBreakdown(slug, "blob10", range),
+          () => this.queryBreakdown(slug, "blob11", range),
+        ],
+        3,
+      );
 
     return {
       enabled: true,

@@ -367,6 +367,13 @@ async function handleShortUrl(c, slug, additionalPath = "") {
   switch (mode) {
     case "redirect":
       response = c.redirect(targetUrl, 302);
+      // 302 由 CDN 边缘缓存，吸收重复访问，减少穿透 Worker/D1
+      // (仅根路径；带密码的链接已提前返回。remind/cloaking/proxy 需动态处理，不缓存)
+      if (!additionalPath) {
+        const headers = new Headers(response.headers);
+        headers.set("Cache-Control", "public, s-maxage=60");
+        response = new Response(response.body, { status: response.status, headers });
+      }
       break;
 
     case "proxy":
@@ -424,10 +431,26 @@ function createAssetResponse(response, status = response.status) {
   });
 }
 
+// 构建产物文件名带 hash，可安全长缓存
+const ASSET_LONG_CACHE = "public, max-age=31536000, immutable";
+
 async function serveFrontendAsset(c) {
   const requestUrl = new URL(c.req.url);
   const response = await fetchFrontendResponse(c, requestUrl.pathname, requestUrl.search);
-  return createAssetResponse(response);
+
+  // 开发模式代理到 vite dev server，不干预其缓存策略
+  if (shouldProxyToDevServer(c)) {
+    return createAssetResponse(response);
+  }
+
+  // 生产模式：带 hash 的构建产物长缓存；入口 HTML 不缓存以始终获取最新
+  const cacheControl = requestUrl.pathname.startsWith("/assets/") ? ASSET_LONG_CACHE : "no-cache";
+  const headers = new Headers(response.headers);
+  headers.set("cache-control", cacheControl);
+  return new Response(response.body, {
+    status: response.status,
+    headers,
+  });
 }
 
 async function serveAppShell(c, { status = 200, dynamicScript = "" } = {}) {
@@ -452,6 +475,8 @@ async function serveAppShell(c, { status = 200, dynamicScript = "" } = {}) {
     status,
     headers: {
       "content-type": "text/html; charset=UTF-8",
+      // SPA 入口不缓存，保证更新后立即可见
+      "cache-control": "no-cache",
     },
   });
 }

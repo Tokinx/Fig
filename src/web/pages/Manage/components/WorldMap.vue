@@ -24,6 +24,30 @@ const containerRef = ref(null);
 const containerWidth = ref(0);
 let resizeObserver = null;
 
+// 世界地图数据源：多 CDN 依次回退，避免单一 CDN 故障影响统计页
+const WORLD_GEO_JSON_URLS = [
+  "https://cdn.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json",
+  "https://fastly.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json",
+  "https://gcore.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json",
+  "https://raw.githubusercontent.com/apache/echarts-www/master/asset/map/json/world.json",
+];
+
+async function loadWorldGeoJson() {
+  for (const url of WORLD_GEO_JSON_URLS) {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) continue;
+      const geoJSON = await response.json();
+      if (geoJSON && geoJSON.features) {
+        return geoJSON;
+      }
+    } catch (error) {
+      console.error("Failed to load world map from:", url, error);
+    }
+  }
+  return null;
+}
+
 const maxVisits = computed(() => Math.max(...props.countries.map((c) => Number(c.visits || 0)), 0));
 
 const regionNames = computed(() => {
@@ -184,8 +208,10 @@ onMounted(async () => {
   }
 
   try {
-    const response = await fetch("https://fastly.jsdelivr.net/gh/apache/echarts-www@master/asset/map/json/world.json");
-    const geoJSON = await response.json();
+    const geoJSON = await loadWorldGeoJson();
+    if (!geoJSON) {
+      throw new Error("All world map CDN sources failed");
+    }
     echarts.registerMap("world", geoJSON);
     mapReady.value = true;
   } catch (error) {

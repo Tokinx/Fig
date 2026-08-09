@@ -39,7 +39,11 @@ import { useI18n } from 'vue-i18n';
 const { t } = useI18n();
 
 const loading = ref(false);
-const tableData = ref([]);
+// 全量模式：后端一次下发全部数据，本地完成搜索/筛选/分页
+const allItems = ref([]);
+// 分页模式：数据量超过后端阈值时，由后端按需分页(见 api.js MAX_FULL_LIST)
+const serverItems = ref([]);
+const isFullMode = ref(true);
 const pagination = ref({ count: 0, page: 1, rows: 20 });
 const currentSearch = ref('');
 const currentFilter = ref('all');
@@ -52,70 +56,83 @@ const statsItem = ref(null);
 const statsVisible = ref(false);
 const copiedSlug = ref(null);
 
-const buildRequestBody = (page, searchQuery = currentSearch.value, filterMode = currentFilter.value) => {
-  const requestBody = {
-    rows: pagination.value.rows,
-    page,
-  };
-
-  if (searchQuery) {
-    requestBody.search = searchQuery;
+// 本地过滤(全量模式，逻辑与后端一致：大小写不敏感子串匹配)
+const localFiltered = computed(() => {
+  let list = allItems.value;
+  const searchTerm = currentSearch.value.trim().toLowerCase();
+  if (searchTerm) {
+    list = list.filter(
+      (x) =>
+        (x.key || "").toLowerCase().includes(searchTerm) ||
+        (x.url || "").toLowerCase().includes(searchTerm) ||
+        (x.displayName || "").toLowerCase().includes(searchTerm) ||
+        (x.notes || "").toLowerCase().includes(searchTerm),
+    );
   }
-
-  if (filterMode && filterMode !== 'all') {
-    requestBody.mode = filterMode;
+  if (currentFilter.value && currentFilter.value !== "all") {
+    list = list.filter((x) => x.mode === currentFilter.value);
   }
+  return list;
+});
 
-  return requestBody;
-};
+// 本地分页(全量模式)
+const localItems = computed(() => {
+  const start = (pagination.value.page - 1) * pagination.value.rows;
+  return localFiltered.value.slice(start, start + pagination.value.rows);
+});
 
-const mapResults = (results = [], oidPrefix = Math.random().toString(36).substring(2)) => {
-  return results.map((x) => {
-    let value = {};
-    try {
-      value = JSON.parse(x.value);
-    } catch (e) {
-      console.log(e);
-    }
+// 表格数据与总数(按模式区分)
+const tableData = computed(() => (isFullMode.value ? localItems.value : serverItems.value));
+const totalCount = computed(() => (isFullMode.value ? localFiltered.value.length : pagination.value.count));
+const pageCount = computed(() => Math.max(1, Math.ceil(totalCount.value / pagination.value.rows)));
 
-    return { ...x, ...value, oid: oidPrefix + x.key, createdAt: x.creation };
-  });
-};
-
-const fetchPage = async (page, searchQuery = currentSearch.value, filterMode = currentFilter.value) => {
-  const response = await fetch(`/api/?action=get`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(buildRequestBody(page, searchQuery, filterMode)),
-  });
-
-  const result = await response.json();
-  if (!response.ok || result.code !== 0) {
-    throw new Error(result.msg || "Failed to fetch links");
+// 页码越界自动回退(删除数据后当前页可能超出范围)
+watch(pageCount, (pc) => {
+  if (pagination.value.page > pc) {
+    pagination.value.page = pc;
   }
+});
 
-  const { count = 0, results = [] } = result.data || {};
-  return {
-    count,
-    items: mapResults(results),
-  };
-};
-
-const applyPageData = ({ count, items }) => {
-  pagination.value.count = count;
-  tableData.value = items;
-};
-
-const loadPage = async (page, searchQuery = currentSearch.value, filterMode = currentFilter.value) => {
+// 拉取列表：全量模式一次拿全部；分页模式携带筛选分页参数
+const load = async ({ page = pagination.value.page, searchQuery = currentSearch.value, filterMode = currentFilter.value } = {}) => {
   const requestId = ++activeRequestId;
   loading.value = true;
 
   try {
-    const data = await fetchPage(page, searchQuery, filterMode);
+    const body = {};
+    if (!isFullMode.value) {
+      body.rows = pagination.value.rows;
+      body.page = page;
+      if (searchQuery) body.search = searchQuery;
+      if (filterMode && filterMode !== "all") body.mode = filterMode;
+    }
+
+    const response = await fetch(`/api/?action=get`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    const result = await response.json();
+    if (!response.ok || result.code !== 0) {
+      throw new Error(result.msg || "Failed to fetch links");
+    }
+
+    const data = result.data || {};
     if (requestId !== activeRequestId) {
       return;
     }
-    applyPageData(data);
+
+    if (data.full) {
+      isFullMode.value = true;
+      allItems.value = data.results || [];
+      pagination.value.count = data.count ?? allItems.value.length;
+    } else {
+      isFullMode.value = false;
+      serverItems.value = data.results || [];
+      pagination.value.count = data.count ?? 0;
+      pagination.value.page = data.page ?? 1;
+    }
   } catch (error) {
     if (requestId === activeRequestId) {
       console.error("Failed to fetch links:", error);
@@ -127,60 +144,34 @@ const loadPage = async (page, searchQuery = currentSearch.value, filterMode = cu
   }
 };
 
-// 页码变化时加载对应页(v-model 同步后触发，避免与点击事件重复)
+// 页码变化：全量模式本地切片自动生效，无需请求；分页模式请求后端
 watch(() => pagination.value.page, (page) => {
-  loadPage(page);
+  if (!isFullMode.value) {
+    load({ page });
+  }
 });
 
-// 数据删除后当前页可能超出范围，自动回退到最后一页(watch 会触发重新加载)
-const clampPage = (count) => {
-  const lastPage = Math.max(1, Math.ceil(count / pagination.value.rows));
-  if (pagination.value.page > lastPage) {
-    pagination.value.page = lastPage;
-    return true;
-  }
-  return false;
-};
-
 const refresh = async (searchQuery = '', filterMode = 'all') => {
+  currentSearch.value = searchQuery;
+  currentFilter.value = filterMode;
   pagination.value.page = 1;
-  await loadPage(1, searchQuery, filterMode);
+  await load({ page: 1, searchQuery, filterMode });
 };
 
-// 搜索方法
+// 搜索方法(全量模式纯本地，分页模式请求后端)
 const search = (query, filterMode = 'all') => {
   currentSearch.value = query;
   currentFilter.value = filterMode;
-  refresh(query, filterMode);
+  pagination.value.page = 1;
+  if (!isFullMode.value) {
+    load({ page: 1, searchQuery: query, filterMode });
+  }
 };
 
 // 筛选方法
-const filter = (query, filterMode) => {
-  currentSearch.value = query;
-  currentFilter.value = filterMode;
-  refresh(query, filterMode);
-};
+const filter = (query, filterMode) => search(query, filterMode);
 
-const refreshCurrentResults = async () => {
-  const requestId = ++activeRequestId;
-  loading.value = true;
-  try {
-    const { count, items } = await fetchPage(pagination.value.page);
-    if (requestId !== activeRequestId) {
-      return;
-    }
-    applyPageData({ count, items });
-    clampPage(count);
-  } catch (error) {
-    if (requestId === activeRequestId) {
-      console.error("Failed to refresh links:", error);
-    }
-  } finally {
-    if (requestId === activeRequestId) {
-      loading.value = false;
-    }
-  }
-};
+const refreshCurrentResults = () => load();
 
 const createLink = () => {
   openLinkPanel()
@@ -329,13 +320,13 @@ defineExpose({ refresh, search, filter, createLink });
           <span v-if="currentSearch && currentFilter !== 'all'">
             {{ t('table.searchInType', {
               query: currentSearch, type: modeLabel(currentFilter), count:
-                pagination.count }) }}
+                totalCount }) }}
           </span>
           <span v-else-if="currentSearch">
-            {{ t('table.searchResults', { query: currentSearch, count: pagination.count }) }}
+            {{ t('table.searchResults', { query: currentSearch, count: totalCount }) }}
           </span>
           <span v-else-if="currentFilter !== 'all'">
-            {{ t('table.filterResults', { type: modeLabel(currentFilter), count: pagination.count }) }}
+            {{ t('table.filterResults', { type: modeLabel(currentFilter), count: totalCount }) }}
           </span>
         </div>
       </div>
@@ -387,7 +378,7 @@ defineExpose({ refresh, search, filter, createLink });
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow v-for="item in tableData" :key="item.oid" class="group">
+          <TableRow v-for="item in tableData" :key="item.key" class="group">
             <!-- 模式 -->
             <TableCell>
               <Badge variant="secondary" class="capitalize rounded-full">{{ modeLabel(item.mode) }}</Badge>
@@ -481,11 +472,11 @@ defineExpose({ refresh, search, filter, createLink });
     <!-- 分页 -->
     <div v-if="tableData.length > 0" class="mt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="text-sm text-muted-foreground">
-        {{ t('pagination.total', { count: pagination.count }) }}
+        {{ t('pagination.total', { count: totalCount }) }}
       </div>
       <Pagination
         v-model:page="pagination.page"
-        :total="pagination.count"
+        :total="totalCount"
         :items-per-page="pagination.rows"
         :sibling-count="1"
         :show-edges="true"

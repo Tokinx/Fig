@@ -2,6 +2,8 @@
 
 // 列表缓存的保留 key(以 _fig_ 开头，save 接口会拦截同名 slug 防止冲突)
 const CACHE_LIST_KEY = "_fig_cache_list";
+// 缓存格式版本号：结构变化时递增，旧缓存自动失效重建
+const CACHE_LIST_VERSION = 2;
 // 非短链数据占用的保留 key
 const RESERVED_KEYS = ["token", CACHE_LIST_KEY];
 
@@ -54,14 +56,14 @@ class DatabaseService {
     return await stmt.all();
   }
 
-  // 读取全量列表缓存：命中直接返回；未命中查询全量并写入缓存
+  // 读取全量列表缓存：命中且版本一致直接返回；否则查询全量并写入缓存
   async cachedList() {
     const cached = await this.value(CACHE_LIST_KEY);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
-          return parsed;
+        if (parsed && parsed._v === CACHE_LIST_VERSION && Array.isArray(parsed.list)) {
+          return parsed.list;
         }
       } catch (e) {
         console.log(e.message);
@@ -76,10 +78,10 @@ class DatabaseService {
       } catch (e) {
         console.log(e.message);
       }
-      // 行级 creation 覆盖 value 内的编辑标志，保持与前端 mapResults 一致
-      return { ...value, key: row.key, creation: row.creation };
+      // 行级创建时间覆盖 value 内的编辑标志，直接提供前端所需字段
+      return { ...value, key: row.key, createdAt: row.creation };
     });
-    await this.put(CACHE_LIST_KEY, JSON.stringify(list));
+    await this.put(CACHE_LIST_KEY, JSON.stringify({ _v: CACHE_LIST_VERSION, list }));
     return list;
   }
 

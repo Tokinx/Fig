@@ -151,14 +151,12 @@ export default class ControllerAPI {
     );
   }
 
+  // 数据量超过该阈值时，列表改为后端按需分页下发，避免全量数据传给前端
+  static MAX_FULL_LIST = 10000;
+
   // get all slugs
   async get() {
     const { request, STORE } = this.utils;
-    const { rows, page, search, mode } = await GetReqJson(request);
-    const safeRows = normalizePositiveInteger(rows, 20);
-    const safePage = normalizePositiveInteger(page, 1);
-    const searchTerm = typeof search === "string" ? search.trim().toLowerCase() : "";
-    const activeMode = typeof mode === "string" ? mode : "";
 
     // 从全量缓存读取(未命中时自动查询 D1 并写缓存)
     let list;
@@ -169,31 +167,47 @@ export default class ControllerAPI {
       return this.createErrorResponse(1052, "Failed to load links.");
     }
 
-    // 内存过滤：与原有 SQL LIKE 逻辑等价(大小写不敏感子串匹配)
-    let filtered = list;
-    if (searchTerm) {
-      filtered = filtered.filter(
-        (x) =>
-          (x.key || "").toLowerCase().includes(searchTerm) ||
-          (x.url || "").toLowerCase().includes(searchTerm) ||
-          (x.displayName || "").toLowerCase().includes(searchTerm) ||
-          (x.notes || "").toLowerCase().includes(searchTerm),
-      );
-    }
-    if (activeMode && activeMode !== "all") {
-      filtered = filtered.filter((x) => x.mode === activeMode);
+    // 超过阈值：后端按需分页，前端退化为服务端分页模式
+    if (list.length > ControllerAPI.MAX_FULL_LIST) {
+      const { rows, page, search, mode } = await GetReqJson(request);
+      const safeRows = normalizePositiveInteger(rows, 20);
+      const safePage = normalizePositiveInteger(page, 1);
+      const searchTerm = typeof search === "string" ? search.trim().toLowerCase() : "";
+      const activeMode = typeof mode === "string" ? mode : "";
+
+      // 内存过滤：与原有 SQL LIKE 逻辑等价(大小写不敏感子串匹配)
+      let filtered = list;
+      if (searchTerm) {
+        filtered = filtered.filter(
+          (x) =>
+            (x.key || "").toLowerCase().includes(searchTerm) ||
+            (x.url || "").toLowerCase().includes(searchTerm) ||
+            (x.displayName || "").toLowerCase().includes(searchTerm) ||
+            (x.notes || "").toLowerCase().includes(searchTerm),
+        );
+      }
+      if (activeMode && activeMode !== "all") {
+        filtered = filtered.filter((x) => x.mode === activeMode);
+      }
+
+      const count = filtered.length;
+      const start = (safePage - 1) * safeRows;
+      return this.createResponse(0, "Success", {
+        results: filtered.slice(start, start + safeRows),
+        count,
+        rows: safeRows,
+        page: safePage,
+        full: false,
+      });
     }
 
-    // 内存分页
-    const count = filtered.length;
-    const start = (safePage - 1) * safeRows;
-    const results = filtered.slice(start, start + safeRows);
-
-    return this.createResponse(0, "Success", {
-      results,
-      count,
-      rows: safeRows,
-      page: safePage,
+    // 数据量小：全量下发给前端，由前端本地完成搜索/筛选/分页
+    return this.createSuccessResponse({
+      results: list,
+      count: list.length,
+      rows: list.length,
+      page: 1,
+      full: true,
     });
   }
 

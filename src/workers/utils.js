@@ -4,8 +4,8 @@
 const CACHE_LIST_KEY = "_fig_cache_list";
 // 缓存格式版本号：结构变化时递增，旧缓存自动失效重建
 const CACHE_LIST_VERSION = 2;
-// 非短链数据占用的保留 key
-const RESERVED_KEYS = ["token", CACHE_LIST_KEY];
+// 列表查询排除：token 及所有 _fig_ 前缀的系统 key(列表缓存、统计缓存等)
+const SYSTEM_KEY_FILTER = "key <> 'token' AND key NOT LIKE '_fig\\_%' ESCAPE '\\'";
 
 class DatabaseService {
   constructor(sqlite) {
@@ -28,7 +28,7 @@ class DatabaseService {
   }
 
   async count({ where = "1=1", params = [] } = {}) {
-    let stmt = this.db.prepare(`SELECT COUNT(*) as count FROM slug WHERE key NOT IN ('${RESERVED_KEYS.join("', '")}') AND ${where}`);
+    let stmt = this.db.prepare(`SELECT COUNT(*) as count FROM slug WHERE ${SYSTEM_KEY_FILTER} AND ${where}`);
     if (params.length > 0) {
       stmt = stmt.bind(...params);
     }
@@ -40,7 +40,7 @@ class DatabaseService {
     const safePage = Math.max(Number.parseInt(page, 10) || 1, 1);
     const offset = (safePage - 1) * safeRows;
     let stmt = this.db.prepare(
-      `SELECT * FROM slug WHERE key NOT IN ('${RESERVED_KEYS.join("', '")}') AND ${where} ORDER BY ${orderby} DESC LIMIT ${safeRows} OFFSET ${offset}`,
+      `SELECT * FROM slug WHERE ${SYSTEM_KEY_FILTER} AND ${where} ORDER BY ${orderby} DESC LIMIT ${safeRows} OFFSET ${offset}`,
     );
     if (params.length > 0) {
       stmt = stmt.bind(...params);
@@ -48,10 +48,10 @@ class DatabaseService {
     return await stmt.all();
   }
 
-  // 查询全部短链行(排除保留 key，按创建时间倒序)
+  // 查询全部短链行(排除系统 key，按创建时间倒序)
   async all() {
     const stmt = this.db.prepare(
-      `SELECT * FROM slug WHERE key NOT IN ('${RESERVED_KEYS.join("', '")}') ORDER BY creation DESC`,
+      `SELECT * FROM slug WHERE ${SYSTEM_KEY_FILTER} ORDER BY creation DESC`,
     );
     return await stmt.all();
   }

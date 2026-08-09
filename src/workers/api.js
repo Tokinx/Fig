@@ -211,8 +211,11 @@ export default class ControllerAPI {
     });
   }
 
+  // 统计结果缓存 TTL(分钟)，减少 Analytics Engine 查询
+  static STATS_CACHE_TTL = 10 * 60 * 1000;
+
   async stats() {
-    const { request } = this.utils;
+    const { request, STORE } = this.utils;
     const { slug, preset, startDate, endDate, timezone } = await GetReqJson(request);
 
     if (!slug) {
@@ -224,8 +227,30 @@ export default class ControllerAPI {
       return this.createErrorResponse(1081, "Slug not found.", 404);
     }
 
+    // 优先读统计缓存(10 分钟 TTL，key 属于 _fig_ 系统前缀，不会出现在列表中)
+    const statsCacheKey = `_fig_stats:${slug}`;
+    try {
+      const cached = await STORE.value(statsCacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed && parsed.data && Date.now() - parsed.t < ControllerAPI.STATS_CACHE_TTL) {
+          return this.createSuccessResponse(parsed.data);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to read stats cache:", error);
+    }
+
     try {
       const data = await this.analytics?.getStats(slug, { preset, startDate, endDate, timezone });
+      // 仅缓存可用的查询结果；enabled=false 表示未配置分析引擎，无需缓存
+      if (data?.enabled) {
+        try {
+          await STORE.put(statsCacheKey, JSON.stringify({ t: Date.now(), data }));
+        } catch (error) {
+          console.error("Failed to write stats cache:", error);
+        }
+      }
       return this.createSuccessResponse(
         data || {
           enabled: false,

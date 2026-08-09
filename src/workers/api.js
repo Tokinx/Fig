@@ -125,6 +125,11 @@ export default class ControllerAPI {
     // if slug is not provided, generate one
     slug = slug || (await this.utils.Slug());
 
+    // 保留 key(_fig_ 开头)用于系统内部数据，不允许作为短链 slug
+    if (slug.startsWith("_fig_")) {
+      return this.createErrorResponse(1051, "Slug already exists.");
+    }
+
     if (!creation) {
       // check if slug already exists
       const { url: existed } = await this.utils.ParseFirst(slug);
@@ -135,6 +140,10 @@ export default class ControllerAPI {
 
     // save url
     const { success, meta: details } = await STORE.put(slug, JSON.stringify(body));
+    if (success) {
+      // 列表已变化，失效全量缓存
+      await STORE.invalidateListCache();
+    }
     return this.createResponse(
       success ? 0 : 1052,
       success ? "Success" : JSON.stringify(details),
@@ -146,37 +155,41 @@ export default class ControllerAPI {
   async get() {
     const { request, STORE } = this.utils;
     const { rows, page, search, mode } = await GetReqJson(request);
-    const safeRows = normalizePositiveInteger(rows, 10);
+    const safeRows = normalizePositiveInteger(rows, 20);
     const safePage = normalizePositiveInteger(page, 1);
     const searchTerm = typeof search === "string" ? search.trim().toLowerCase() : "";
     const activeMode = typeof mode === "string" ? mode : "";
-    const whereClauses = [];
-    const params = [];
 
+    // 从全量缓存读取(未命中时自动查询 D1 并写缓存)
+    let list;
+    try {
+      list = await STORE.cachedList();
+    } catch (error) {
+      console.error("Failed to load cached list:", error);
+      return this.createErrorResponse(1052, "Failed to load links.");
+    }
+
+    // 内存过滤：与原有 SQL LIKE 逻辑等价(大小写不敏感子串匹配)
+    let filtered = list;
     if (searchTerm) {
-      const likeTerm = `%${searchTerm}%`;
-      whereClauses.push(`(
-        LOWER(key) LIKE ?
-        OR LOWER(COALESCE(json_extract(value, '$.url'), '')) LIKE ?
-        OR LOWER(COALESCE(json_extract(value, '$.displayName'), '')) LIKE ?
-        OR LOWER(COALESCE(json_extract(value, '$.notes'), '')) LIKE ?
-      )`);
-      params.push(likeTerm, likeTerm, likeTerm, likeTerm);
+      filtered = filtered.filter(
+        (x) =>
+          (x.key || "").toLowerCase().includes(searchTerm) ||
+          (x.url || "").toLowerCase().includes(searchTerm) ||
+          (x.displayName || "").toLowerCase().includes(searchTerm) ||
+          (x.notes || "").toLowerCase().includes(searchTerm),
+      );
     }
-
     if (activeMode && activeMode !== "all") {
-      whereClauses.push(`json_extract(value, '$.mode') = ?`);
-      params.push(activeMode);
+      filtered = filtered.filter((x) => x.mode === activeMode);
     }
 
-    const where = whereClauses.length > 0 ? whereClauses.join(" AND ") : "1=1";
-    const [count, { success, results = [] }] = await Promise.all([
-      STORE.count({ where, params }),
-      STORE.get({ where, params, rows: safeRows, page: safePage }),
-    ]);
+    // 内存分页
+    const count = filtered.length;
+    const start = (safePage - 1) * safeRows;
+    const results = filtered.slice(start, start + safeRows);
 
-    // 返回数据库中的短链列表
-    return this.createResponse(success ? 0 : 1052, "Success", {
+    return this.createResponse(0, "Success", {
       results,
       count,
       rows: safeRows,
@@ -227,6 +240,10 @@ export default class ControllerAPI {
     let body = await GetReqJson(request);
     let { slug } = body;
     const { success, meta: details } = await STORE.delete(slug);
+    if (success) {
+      // 列表已变化，失效全量缓存
+      await STORE.invalidateListCache();
+    }
     return this.createResponse(success ? 0 : 1060, success ? "Success" : JSON.stringify(details), null);
   }
 

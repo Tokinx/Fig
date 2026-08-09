@@ -107,7 +107,15 @@
     "createLink": "建立短網址",
     "searchInType": "搜尋 \"{query}\" 在 {type} 類型中，找到 {count} 條結果",
     "searchResults": "正在搜尋 \"{query}\"，找到 {count} 條結果",
-    "filterResults": "正在篩選 {type} 類型，找到 {count} 條結果"
+    "filterResults": "正在篩選 {type} 類型，找到 {count} 條結果",
+    "columns": {
+      "slug": "短網址",
+      "url": "目標連結",
+      "mode": "模式",
+      "notes": "備註",
+      "createdAt": "建立時間",
+      "actions": "操作"
+    }
   },
   "stats": {
     "analytics": "存取統計",
@@ -171,5 +179,13 @@
   },
   "footer": {
     "buildOn": "建構於"
+  },
+  "pagination": {
+    "total": "共 {count} 條",
+    "first": "首頁",
+    "last": "末頁",
+    "prev": "上一頁",
+    "next": "下一頁",
+    "goToPage": "跳轉到第 {page} 頁"
   }
 }

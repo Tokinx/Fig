@@ -12,7 +12,7 @@ const forwarded = useForwardProps(props);
 
 <template>
   <PaginationFirst v-bind="forwarded">
-    <Button class="w-9 h-9 p-0" variant="outline">
+    <Button class="w-8 h-8 p-0 rounded-full shadow-none" variant="outline">
       <slot>
         <DoubleArrowLeftIcon />
       </slot>
